@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRINETRA — Pulse Induction Landmine Detector Core</title>
+  <meta name="description" content="Module 3: Metal detector induction search coil signal analysis, detection alerts, and buried mine logs.">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+  <!-- Tactical Header -->
+  <header class="tactical-header">
+    <a href="/" class="brand-section">
+      <div class="brand-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="brand-titles">
+        <h1>TRINETRA <span class="brand-badge">DETECTOR CORE</span></h1>
+        <p>MODULE 03 • PULSE INDUCTION ELECTROMAGNETIC SENSING</p>
+      </div>
+    </a>
+
+    <ul class="nav-links" id="navLinks">
+      <li class="nav-item"><a href="/">Cockpit</a></li>
+      <li class="nav-item"><a href="/robot">3D Explorer</a></li>
+      <li class="nav-item"><a href="/camera">Optical Stream</a></li>
+      <li class="nav-item"><a href="/gps">Tactical Map</a></li>
+      <li class="nav-item active"><a href="/sensors">Induction Core</a></li>
+      <li class="nav-item"><a href="/system">Diagnostics</a></li>
+    </ul>
+
+    <div class="header-status-group">
+      <div class="status-pill">
+        <span class="status-dot pulse" id="globalStatusDot"></span>
+        <span id="globalStatusText">ONLINE</span>
+      </div>
+      <a href="/" class="btn-cyber">← Back to Cockpit</a>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <!-- Active Landmine Alarm Banner -->
+    <div class="detection-alarm-banner" id="detectionAlarmBanner" style="display: none;">
+      <div style="display: flex; align-items: center; gap: 0.85rem;">
+        <span style="font-size: 2rem;">💥</span>
+        <div>
+          <strong style="font-size: 1.05rem; letter-spacing: 0.05em; color: #fff;">CRITICAL ELECTROMAGNETIC ANOMALY DETECTED!</strong>
+          <div style="font-size: 0.82rem; color: #fecaca;" id="alarmCoordinatesText">Buried Landmine Candidate Pinpointed</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn-cyber btn-red" id="btnToggleAlarmAudio">🔇 Toggle Sound</button>
+        <button class="btn-cyber btn-amber" onclick="window.pinDetectedAnomaly()">📌 Bookmark on Map</button>
+      </div>
+    </div>
+
+    <!-- Main Signal Gauge & History Layout -->
+    <div class="dashboard-grid" style="grid-template-columns: 1.2fr 1.8fr; margin-bottom: 1.5rem;">
+
+      <!-- Panel 1: Signal Gauge & Controls -->
+      <section class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+            Search Loop Signal Meter
+          </div>
+          <span class="status-pill" style="color: var(--accent-cyan);">COIL LIVE</span>
+        </div>
+
+        <div class="detector-gauge-wrapper">
+          <div style="text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;">Current Signal Strength</div>
+            <div class="stat-value" id="statSignalStrength" style="font-size: 3.5rem; color: var(--accent-cyan); text-shadow: 0 0 20px rgba(0,240,255,0.4);">4.2%</div>
+            <div style="font-size: 0.75rem; color: var(--text-dim);">Background Soil Ground Balance: Active</div>
+          </div>
+
+          <div class="signal-meter-bar">
+            <div class="signal-meter-fill" id="signalMeterFill"></div>
+          </div>
+
+          <div style="width: 100%; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);">
+            <span>0% (Clean)</span>
+            <span style="color: var(--accent-yellow);">50% (Threshold)</span>
+            <span style="color: var(--accent-red);">100% (Confirmed Mine)</span>
+          </div>
+
+          <div style="width: 100%; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
+            <button class="btn-cyber btn-red" id="btnSimulateMineDetection" style="justify-content: center;">
+              ⚡ Simulate Landmine Detection Spike
+            </button>
+            <a href="/robot" class="btn-cyber" style="justify-content: center;">
+              Inspect 3D Metal Detector Arm →
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 2: Georeferenced Landmine Detection Log Table -->
+      <section class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            Historical Detection Event Log
+          </div>
+          <button class="btn-cyber" onclick="window.exportDetectionLog()">Export CSV 📥</button>
+        </div>
+
+        <div style="overflow-x: auto; max-height: 480px;">
+          <table class="cyber-table">
+            <thead>
+              <tr>
+                <th>Event ID</th>
+                <th>Time (UTC)</th>
+                <th>Coordinates</th>
+                <th>Signal Amplitude</th>
+                <th>Verification State</th>
+              </tr>
+            </thead>
+            <tbody id="detectionsTableBody">
+              <!-- Dynamically populated from /api/detections -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <script src="/static/js/main.js"></script>
+  <script src="/static/js/telemetry.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      new TrinetraTelemetryUI();
+
+      // Pin detected anomaly to map
+      window.pinDetectedAnomaly = async function() {
+        const lastCoords = window.TrinetraApp?.latestTelemetry?.location;
+        if (lastCoords) {
+          await fetch('/api/location/pins', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              latitude: lastCoords.latitude,
+              longitude: lastCoords.longitude,
+              label: `Mine Anomaly (${window.TrinetraApp.latestTelemetry.sensors.signal_strength || 85}%)`,
+              pin_type: 'suspected_mine'
+            })
+          });
+          alert("Anomaly location successfully pinned to tactical map!");
+        }
+      };
+
+      // Export detection log as CSV
+      window.exportDetectionLog = async function() {
+        const res = await fetch('/api/detections');
+        if (res.ok) {
+          const events = await res.json();
+          let csv = "ID,Timestamp,Latitude,Longitude,SignalStrength,DepthEstCM,Status\n";
+          events.forEach(e => {
+            csv += `"${e.id}","${e.timestamp}",${e.latitude || ''},${e.longitude || ''},${e.signal_strength},${e.depth_estimate_cm || ''},"${e.status}"\n`;
+          });
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `trinetra-detections-${Date.now()}.csv`;
+          a.click();
+        }
+      };
+    });
+  </script>
+
+</body>
+</html>

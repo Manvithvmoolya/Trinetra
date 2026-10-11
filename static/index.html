@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRINETRA — Indigenous Landmine Detection System</title>
+  <meta name="description" content="Mission control dashboard and interactive 3D telemetry monitoring for the Trinetra Indigenous Landmine Detection Robot rover.">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+  <!-- Tactical Header -->
+  <header class="tactical-header">
+    <a href="/" class="brand-section">
+      <div class="brand-logo-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div class="brand-titles">
+        <h1>TRINETRA <span class="brand-badge">MK-1 SYSTEM</span></h1>
+        <p>INDIGENOUS LANDMINE DETECTION ROBOT</p>
+      </div>
+    </a>
+
+    <ul class="nav-links" id="navLinks">
+      <li class="nav-item active"><a href="/">Cockpit</a></li>
+      <li class="nav-item"><a href="/robot">3D Explorer</a></li>
+      <li class="nav-item"><a href="/camera">Optical Stream</a></li>
+      <li class="nav-item"><a href="/gps">Tactical Map</a></li>
+      <li class="nav-item"><a href="/sensors">Induction Core</a></li>
+      <li class="nav-item"><a href="/system">Diagnostics</a></li>
+    </ul>
+
+    <div class="header-status-group">
+      <div class="status-pill">
+        <span class="status-dot pulse" id="globalStatusDot"></span>
+        <span id="globalStatusText">CONNECTING...</span>
+      </div>
+      <div class="status-pill" id="backendLinkBadge" style="color: var(--accent-cyan);">
+        WS LIVE
+      </div>
+      <button class="btn-mobile-nav" id="mobileNavToggle">☰</button>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <!-- Landmine Detection Alert Banner (Appears when anomaly is triggered) -->
+    <div class="detection-alarm-banner" id="detectionAlarmBanner" style="display: none;">
+      <div style="display: flex; align-items: center; gap: 0.85rem;">
+        <span style="font-size: 1.6rem;">⚠️</span>
+        <div>
+          <strong style="font-size: 0.95rem; letter-spacing: 0.05em; color: #fff;">HIGH-CONFIDENCE METAL / MINE ANOMALY DETECTED!</strong>
+          <div style="font-size: 0.78rem; color: #fecaca;" id="alarmCoordinatesText">Calculating georeferenced coordinates...</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn-cyber btn-red" id="btnToggleAlarmAudio">🔇 Audio Muted</button>
+        <a href="/sensors" class="btn-cyber">Inspect Anomaly →</a>
+      </div>
+    </div>
+
+    <!-- Telemetry Stats Summary Row -->
+    <section class="telemetry-summary-row">
+      <div class="stat-card">
+        <span class="stat-label">Power Storage</span>
+        <div class="stat-value" id="statBatteryVolts">12.40 V</div>
+        <div class="stat-subtext">
+          <span id="statBatteryPercent">88%</span> • 3S LiPo Cell Pack
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Induction Signal</span>
+        <div class="stat-value" id="statSignalStrength">4.2%</div>
+        <div class="stat-subtext">Coil Status: Nominal Ground Flux</div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Propulsion State</span>
+        <div class="stat-value" id="statMotorState">NOMINAL</div>
+        <div class="stat-subtext">4WD Motors Synchronized</div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Core Temperature</span>
+        <div class="stat-value" id="statMcuTemp">32.4 °C</div>
+        <div class="stat-subtext">ESP32 Thermal Index Nominal</div>
+      </div>
+    </section>
+
+    <!-- Cockpit Dual Grid: 3D Robot Viewer & Tactical Live Map -->
+    <div class="dashboard-grid">
+
+      <!-- Panel 1: 3D Interactive Robot Viewer with Exploded View -->
+      <section class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 14.93V17a1 1 0 11-2 0v-.07A7.003 7.003 0 015.07 11H5a1 1 0 110-2h.07A7.003 7.003 0 0111 2.07V2a1 1 0 112 0v.07A7.003 7.003 0 0118.93 9H19a1 1 0 110 2h-.07A7.003 7.003 0 0113 16.93z"/></svg>
+            Interactive 3D Robot Viewer
+          </div>
+          <div class="panel-actions">
+            <button class="btn-cyber" id="btnExplodeComponents">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              </svg> Explore Components
+            </button>
+            <a href="/robot" class="btn-icon" title="Full Screen 3D Explorer">⛶</a>
+          </div>
+        </div>
+
+        <div class="robot-viewport-wrapper" id="robotViewerContainer">
+          <!-- Loading Overlay -->
+          <div class="viewport-loading-overlay">
+            <div class="cyber-spinner"></div>
+            <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-cyan);">INITIALIZING THREE.JS WEBGL ENGINE...</div>
+          </div>
+
+          <!-- Top HUD Badges -->
+          <div class="viewport-hud-top">
+            <div class="hud-badge" id="hudHoveredPartName">TRINETRA MK-1 • READY</div>
+            <div class="hud-badge" style="color: var(--accent-yellow);">4WD RUGGED ROVER</div>
+          </div>
+
+          <!-- Bottom Viewport Controls -->
+          <div class="viewport-controls-bottom">
+            <div class="hud-button-group">
+              <button class="btn-icon" id="btnResetCamera" title="Reset Camera View">↺</button>
+              <button class="btn-icon active" id="btnToggleAutoRotate" title="Toggle Auto-Rotation">⟳</button>
+              <button class="btn-icon" id="btnToggleHeadlights" title="Toggle Front Camera LEDs">💡</button>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-dim); background: rgba(5,8,17,0.7); padding: 4px 8px; border-radius: 4px;">
+              CLICK ROBOT TO INSPECT MODULES
+            </div>
+          </div>
+
+          <!-- Module Inspector Slide-Out Drawer -->
+          <div class="module-inspector-drawer" id="moduleInspectorDrawer">
+            <div class="drawer-header">
+              <span class="drawer-module-tag" id="drawerTag">MODULE SPEC</span>
+              <button class="btn-icon" id="btnCloseDrawer">✕</button>
+            </div>
+            <h4 class="drawer-title" id="drawerTitle">Module Title</h4>
+            <p class="drawer-desc" id="drawerDesc">Module operational description.</p>
+            <div class="drawer-telemetry-list" id="drawerSpecsList"></div>
+            <a href="#" class="btn-cyber" id="drawerInspectLink" style="width: 100%; justify-content: center;">Inspect Module →</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 2: Live Tactical GPS Map with Location Pinning -->
+      <section class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Live Tactical GPS Map
+          </div>
+          <div class="panel-actions">
+            <button class="btn-cyber" id="btnPinCurrentLocation" title="Pin current robot coordinates">📌 Pin Current</button>
+            <button class="btn-cyber btn-amber" id="btnToggleDropPinMode" title="Click anywhere on map to drop pin">📍 Drop Pin</button>
+            <button class="btn-icon" id="btnTogglePinnedList" title="View Pinned Locations">📑</button>
+            <a href="/gps" class="btn-icon" title="Full Map View">⛶</a>
+          </div>
+        </div>
+
+        <div class="map-panel-wrapper">
+          <div class="leaflet-map-container" id="homeLeafletMap"></div>
+
+          <!-- Floating Coordinates HUD -->
+          <div class="map-floating-hud">
+            <div>LAT: <span id="mapHudLatitude" style="color: #fff;">12.914100</span></div>
+            <div>LON: <span id="mapHudLongitude" style="color: #fff;">74.856000</span></div>
+            <div>SPD: <span id="mapHudSpeed" style="color: var(--accent-cyan);">0.0 m/s</span></div>
+            <div id="mapHudSourceBadge" style="font-size: 10px; color: var(--accent-yellow);">DEMO / SIMULATED GPS</div>
+          </div>
+
+          <!-- Bottom Map Toolbar -->
+          <div class="map-toolbar">
+            <button class="btn-cyber" id="btnCenterMap">🎯 Center Robot</button>
+            <button class="btn-icon" id="btnToggleFollow" title="Auto-follow Robot">🧭 Follow</button>
+          </div>
+
+          <!-- Pinned Locations Drawer -->
+          <div class="pinned-locations-drawer" id="pinnedLocationsDrawer">
+            <div style="font-weight: 700; font-size: 12px; color: var(--accent-cyan); margin-bottom: 6px; display: flex; justify-content: space-between;">
+              <span>TACTICAL PINS</span>
+              <span style="font-size: 10px; color: var(--text-dim);">CLICK MAP TO ADD</span>
+            </div>
+            <div id="pinnedLocationsList"></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Five Interactive Robot Modules Deck (Exploration Overview) -->
+    <section class="full-width-section">
+      <div class="panel-header" style="margin-bottom: 1.25rem;">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+          Five Operational Robot Sub-Systems
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn-cyber btn-amber" id="btnToggleSimulation">Start Demo Simulation</button>
+          <button class="btn-cyber btn-red" id="btnSimulateMineDetection">Trigger Test Anomaly</button>
+        </div>
+      </div>
+
+      <div class="modules-deck-grid">
+
+        <!-- Module 1 -->
+        <a href="/camera" class="module-card">
+          <div>
+            <div class="module-card-icon">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 9a3 3 0 100 6 3 3 0 000-6zm-7 9h14a2 2 0 002-2V8a2 2 0 00-2-2h-3.17L14.41 4.59A2 2 0 0013 4h-2a2 2 0 00-1.41.59L8.17 6H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            </div>
+            <h3>Module 1: Optical Camera</h3>
+            <p>Wide-angle reconnaissance camera with 8-LED ring illumination and direct MJPEG/RTSP stream support.</p>
+          </div>
+          <div class="module-card-footer">
+            <span class="status-indicator-tag">● READY</span>
+            <span>VIEW STREAM →</span>
+          </div>
+        </a>
+
+        <!-- Module 2 -->
+        <a href="/gps" class="module-card">
+          <div>
+            <div class="module-card-icon" style="color: var(--accent-yellow); background: rgba(250,204,21,0.1);">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            </div>
+            <h3>Module 2: GNSS / GPS Mast</h3>
+            <p>Elevated ceramic antenna dome for autonomous waypoint navigation, coordinate pinning, and breadcrumb tracking.</p>
+          </div>
+          <div class="module-card-footer">
+            <span class="status-indicator-tag">● 10 HZ STREAM</span>
+            <span>TACTICAL MAP →</span>
+          </div>
+        </a>
+
+        <!-- Module 3 -->
+        <a href="/sensors" class="module-card">
+          <div>
+            <div class="module-card-icon" style="color: var(--accent-red); background: rgba(239,68,68,0.1);">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+            </div>
+            <h3>Module 3: Metal Detector</h3>
+            <p>8-spoke circular induction search loop and stepped oscillator cylinder for buried mine detection.</p>
+          </div>
+          <div class="module-card-footer">
+            <span class="status-indicator-tag" style="color: var(--accent-red);">● COIL ACTIVE</span>
+            <span>SIGNAL HUD →</span>
+          </div>
+        </a>
+
+        <!-- Module 4 -->
+        <a href="/system" class="module-card">
+          <div>
+            <div class="module-card-icon" style="color: var(--accent-cyan); background: rgba(0,240,255,0.1);">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+            </div>
+            <h3>Module 4: ESP32 Controller</h3>
+            <p>Dual-core micro-controller board, Wi-Fi uplink, high-gain whip antenna, and heartbeat monitoring.</p>
+          </div>
+          <div class="module-card-footer">
+            <span class="status-indicator-tag">● TELEMETRY LINK</span>
+            <span>DIAGNOSTICS →</span>
+          </div>
+        </a>
+
+        <!-- Module 5 -->
+        <a href="/system" class="module-card">
+          <div>
+            <div class="module-card-icon" style="color: var(--accent-yellow); background: rgba(250,204,21,0.1);">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+            </div>
+            <h3>Module 5: 4WD & Battery</h3>
+            <p>4 heavy-duty off-road tires with yellow rims, all-wheel geared motors, and 3S LiPo battery pack.</p>
+          </div>
+          <div class="module-card-footer">
+            <span class="status-indicator-tag">● 12.4V NOMINAL</span>
+            <span>POWER HUD →</span>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Application Scripts -->
+  <script src="/static/js/main.js"></script>
+  <script src="/static/js/robot3d.js"></script>
+  <script src="/static/js/explodedView.js"></script>
+  <script src="/static/js/map.js"></script>
+  <script src="/static/js/telemetry.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Initialize 3D Robot Scene
+      const robotViewer = new TrinetraRobot3D('robotViewerContainer');
+      const explodedCtrl = new TrinetraExplodedView(robotViewer);
+
+      // 2. Initialize Tactical Map
+      const tacticalMap = new TrinetraMap('homeLeafletMap');
+      window.TrinetraActiveMap = tacticalMap;
+
+      // 3. Initialize Telemetry UI
+      new TrinetraTelemetryUI();
+    });
+  </script>
+
+</body>
+</html>

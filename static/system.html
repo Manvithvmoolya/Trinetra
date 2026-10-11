@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRINETRA — System Diagnostics & ESP32 Hardware Interface</title>
+  <meta name="description" content="Modules 4 & 5: Backend health, ESP32 hardware telemetry stream, battery status, and simulation controller.">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+  <!-- Tactical Header -->
+  <header class="tactical-header">
+    <a href="/" class="brand-section">
+      <div class="brand-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="brand-titles">
+        <h1>TRINETRA <span class="brand-badge">DIAGNOSTICS</span></h1>
+        <p>MODULES 04 & 05 • CONTROLLER, PROPULSION & HARDWARE LINK</p>
+      </div>
+    </a>
+
+    <ul class="nav-links" id="navLinks">
+      <li class="nav-item"><a href="/">Cockpit</a></li>
+      <li class="nav-item"><a href="/robot">3D Explorer</a></li>
+      <li class="nav-item"><a href="/camera">Optical Stream</a></li>
+      <li class="nav-item"><a href="/gps">Tactical Map</a></li>
+      <li class="nav-item"><a href="/sensors">Induction Core</a></li>
+      <li class="nav-item active"><a href="/system">Diagnostics</a></li>
+    </ul>
+
+    <div class="header-status-group">
+      <div class="status-pill">
+        <span class="status-dot pulse" id="globalStatusDot"></span>
+        <span id="globalStatusText">ONLINE</span>
+      </div>
+      <a href="/" class="btn-cyber">← Back to Cockpit</a>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <!-- System Status Cards -->
+    <section class="telemetry-summary-row">
+      <div class="stat-card success-card">
+        <span class="stat-label">Backend Operational State</span>
+        <div class="stat-value" style="color: var(--accent-green);">HEALTHY</div>
+        <div class="stat-subtext">FastAPI / Uvicorn Engine Active</div>
+      </div>
+
+      <div class="stat-card" id="cardEsp32State">
+        <span class="stat-label">ESP32 Hardware Link</span>
+        <div class="stat-value" id="dispEsp32StatusText" style="color: var(--accent-yellow);">STANDBY</div>
+        <div class="stat-subtext" id="dispEsp32HeartbeatText">Awaiting Wi-Fi Uplink</div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Simulation Engine</span>
+        <div class="stat-value" id="dispSimStatusText">STANDBY</div>
+        <div class="stat-subtext">Autonomous Patrol Generator</div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Server Uptime</span>
+        <div class="stat-value" id="dispServerUptime">0.0 s</div>
+        <div class="stat-subtext">Process Runtime Counter</div>
+      </div>
+    </section>
+
+    <div class="dashboard-grid" style="grid-template-columns: 1.2fr 1.8fr;">
+
+      <!-- Panel 1: Simulation Engine & Control Station -->
+      <section class="glass-panel" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42A6.92 6.92 0 0119 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.38 1.19-4.47 3-5.74L6.59 4.84A8.937 8.937 0 003 12c0 4.97 4.02 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+            Simulation Station
+          </div>
+          <span class="status-pill" style="font-size: 11px; color: var(--accent-yellow);">DEMO MODE</span>
+        </div>
+
+        <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+          When real ESP32 hardware is not physically transmitting, enable the autonomous patrol simulation to test the 3D model, GPS tracking, and landmine detection telemetry.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+          <button class="btn-cyber btn-amber" id="btnToggleSimulation" style="justify-content: center;">
+            Start Demo Simulation
+          </button>
+          <button class="btn-cyber btn-red" id="btnSimulateMineDetection" style="justify-content: center;">
+            ⚡ Trigger Simulated Mine Detection Event
+          </button>
+        </div>
+
+        <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-subtle);">
+          <div class="drawer-telemetry-list">
+            <div class="drawer-telemetry-row">
+              <span>Drive Mode</span>
+              <span id="statMotorState">NOMINAL</span>
+            </div>
+            <div class="drawer-telemetry-row">
+              <span>Battery Level</span>
+              <span id="statBatteryVolts">12.4 V</span>
+            </div>
+            <div class="drawer-telemetry-row">
+              <span>MCU Core Temp</span>
+              <span id="statMcuTemp">32.4 °C</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 2: Live Raw JSON Telemetry Stream Inspector -->
+      <section class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            Live JSON Telemetry Uplink Inspector
+          </div>
+          <button class="btn-cyber" onclick="navigator.clipboard.writeText(document.getElementById('rawJsonTelemetryView').textContent); alert('Copied telemetry JSON to clipboard!');">
+            Copy Payload 📋
+          </button>
+        </div>
+
+        <pre id="rawJsonTelemetryView" style="background: rgba(5,8,17,0.95); border: 1px solid var(--border-glass); border-radius: 8px; padding: 1rem; font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-cyan); max-height: 400px; overflow-y: auto;">
+Connecting to telemetry stream...
+        </pre>
+      </section>
+
+    </div>
+
+    <!-- ESP32 Hardware Integration Guide Section -->
+    <section class="glass-panel" style="margin-top: 1.5rem;">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24"><path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+          ESP32 / Arduino Wi-Fi Integration Guide & Firmware
+        </div>
+        <span class="status-pill" style="color: var(--accent-green);">FIRMWARE READY</span>
+      </div>
+
+      <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; display: flex; flex-direction: column; gap: 1rem;">
+        <p>
+          The Trinetra backend is configured to accept JSON payloads directly from your ESP32 or Arduino Wi-Fi module.
+        </p>
+
+        <div style="background: rgba(15,23,42,0.8); border-left: 3px solid var(--accent-cyan); padding: 0.85rem 1rem; border-radius: 4px;">
+          <strong style="color: #fff;">Important Local Network Configuration:</strong><br>
+          Microcontrollers cannot reach your computer via <code>127.0.0.1</code> or <code>localhost</code> (that points to the ESP32 itself).<br>
+          1. Run <code style="color: var(--accent-yellow);">ipconfig</code> in Windows PowerShell to find your computer's IPv4 address (e.g. <code>192.168.1.150</code>).<br>
+          2. Ensure your computer and ESP32 are connected to the same Wi-Fi network.<br>
+          3. Set the server endpoint in the ESP32 code to: <code style="color: var(--accent-cyan);">http://&lt;YOUR_LAPTOP_IP&gt;:8000/api/sensors</code>
+        </div>
+
+        <p>
+          <strong style="color: #fff;">Example Arduino C++ Telemetry Loop:</strong>
+        </p>
+        <pre style="background: rgba(5,8,17,0.95); border: 1px solid var(--border-glass); border-radius: 8px; padding: 1rem; font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-yellow); overflow-x: auto;">
+#include &lt;WiFi.h&gt;
+#include &lt;HTTPClient.h&gt;
+
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
+const char* serverUrl = "http://192.168.1.150:8000/api/sensors";
+
+void sendTelemetry(bool metalDetected, float signalStrength, float battVoltage) {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+
+    String jsonPayload = "{\"device_id\":\"trinetra-01\","
+                         "\"metal_detected\":" + String(metalDetected ? "true" : "false") + ","
+                         "\"signal_strength\":" + String(signalStrength, 1) + ","
+                         "\"battery_voltage\":" + String(battVoltage, 2) + ","
+                         "\"battery_percentage\":85.0,"
+                         "\"motor_status\":\"nominal\","
+                         "\"is_simulated\":false}";
+
+    int httpCode = http.POST(jsonPayload);
+    http.end();
+  }
+}
+        </pre>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/static/js/main.js"></script>
+  <script src="/static/js/telemetry.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      new TrinetraTelemetryUI();
+
+      // Subscribe to raw JSON display and status cards
+      if (window.TrinetraApp) {
+        window.TrinetraApp.onTelemetry((telemetry) => {
+          const pre = document.getElementById('rawJsonTelemetryView');
+          if (pre) {
+            pre.textContent = JSON.stringify(telemetry, null, 2);
+          }
+
+          const status = telemetry.status || {};
+          const uptimeEl = document.getElementById('dispServerUptime');
+          if (uptimeEl && status.uptime_seconds !== undefined) {
+            uptimeEl.textContent = `${status.uptime_seconds.toFixed(0)} s`;
+          }
+
+          const espStatus = document.getElementById('dispEsp32StatusText');
+          const espHeartbeat = document.getElementById('dispEsp32HeartbeatText');
+          if (espStatus && espHeartbeat) {
+            if (status.esp32_connected) {
+              espStatus.textContent = 'ONLINE';
+              espStatus.style.color = 'var(--accent-green)';
+              espHeartbeat.textContent = `Heartbeat: ${status.seconds_since_heartbeat || 0}s ago`;
+            } else {
+              espStatus.textContent = 'DISCONNECTED';
+              espStatus.style.color = 'var(--accent-red)';
+              espHeartbeat.textContent = status.last_heartbeat ? `Last seen: ${status.seconds_since_heartbeat}s ago` : 'No hardware packet received';
+            }
+          }
+
+          const simStatus = document.getElementById('dispSimStatusText');
+          if (simStatus) {
+            simStatus.textContent = status.simulation_active ? 'ACTIVE' : 'STANDBY';
+            simStatus.style.color = status.simulation_active ? 'var(--accent-yellow)' : 'var(--text-muted)';
+          }
+        });
+      }
+    });
+  </script>
+
+</body>
+</html>

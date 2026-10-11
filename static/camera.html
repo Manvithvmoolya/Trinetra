@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRINETRA — Optical Reconnaissance & Live Camera</title>
+  <meta name="description" content="Module 1: Real-time optical video stream and forward hazardous terrain illumination monitoring.">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+  <!-- Tactical Header -->
+  <header class="tactical-header">
+    <a href="/" class="brand-section">
+      <div class="brand-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="brand-titles">
+        <h1>TRINETRA <span class="brand-badge">OPTICAL FEED</span></h1>
+        <p>MODULE 01 • FORWARD VISION & ILLUMINATION</p>
+      </div>
+    </a>
+
+    <ul class="nav-links" id="navLinks">
+      <li class="nav-item"><a href="/">Cockpit</a></li>
+      <li class="nav-item"><a href="/robot">3D Explorer</a></li>
+      <li class="nav-item active"><a href="/camera">Optical Stream</a></li>
+      <li class="nav-item"><a href="/gps">Tactical Map</a></li>
+      <li class="nav-item"><a href="/sensors">Induction Core</a></li>
+      <li class="nav-item"><a href="/system">Diagnostics</a></li>
+    </ul>
+
+    <div class="header-status-group">
+      <div class="status-pill">
+        <span class="status-dot pulse" id="globalStatusDot"></span>
+        <span id="globalStatusText">ONLINE</span>
+      </div>
+      <a href="/" class="btn-cyber">← Back to Cockpit</a>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <div class="dashboard-grid" style="grid-template-columns: 2.2fr 1fr;">
+
+      <!-- Main Video Screen Panel -->
+      <section class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M12 9a3 3 0 100 6 3 3 0 000-6zm-7 9h14a2 2 0 002-2V8a2 2 0 00-2-2h-3.17L14.41 4.59A2 2 0 0013 4h-2a2 2 0 00-1.41.59L8.17 6H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            Live Optical Reconnaissance Feed
+          </div>
+          <div class="panel-actions">
+            <span class="status-pill" id="cameraStatusBadge" style="color: var(--text-muted);">STANDBY / NOT CONFIGURED</span>
+            <button class="btn-cyber" id="btnOpenCamConfigModal">⚙ Configure Stream</button>
+            <button class="btn-icon" id="btnReloadCamStream" title="Refresh Stream">↺</button>
+            <button class="btn-icon" id="btnCaptureSnapshot" title="Capture Snapshot">📷</button>
+          </div>
+        </div>
+
+        <div class="camera-screen-box">
+          <div class="camera-crosshairs"></div>
+
+          <!-- Video Element or Image Stream -->
+          <img id="cameraLiveFeedImg" class="camera-feed-img" style="display: none;" alt="Trinetra Live Camera Stream">
+
+          <!-- Honest Placeholder (Shown when stream unconfigured) -->
+          <div class="camera-placeholder-overlay" id="cameraPlaceholderOverlay">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(0,240,255,0.1); border: 2px dashed var(--accent-cyan); display: flex; align-items: center; justify-content: center; font-size: 28px;">
+              📹
+            </div>
+            <h3 style="color: #fff; font-size: 1.15rem; font-weight: 600;">No Camera Stream Configured</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
+              Connect an HTTP/MJPEG camera stream, ESP32-CAM endpoint, or RTSP gateway URL to activate live video monitoring.
+            </p>
+            <div style="display: flex; gap: 0.6rem;">
+              <button class="btn-cyber" onclick="document.getElementById('cameraConfigModal').classList.add('open')">Configure Stream URL</button>
+              <button class="btn-cyber btn-amber" id="btnOpenRtspGuideModal">RTSP Setup Guide (V380 Pro)</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.85rem; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">
+          <span id="cameraActiveUrlDisplay">STATUS: No stream URL configured</span>
+          <span style="color: var(--accent-cyan);">TRINETRA MK-1 VISION UNIT</span>
+        </div>
+      </section>
+
+      <!-- Optical Specifications & Control Sidebar -->
+      <section class="glass-panel" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M13 14h-2v-4h2v4zm0 4h-2v-2h2v2zm-12 3h22L12 2 1 21z"/></svg>
+            Vision Hardware Specifications
+          </div>
+        </div>
+
+        <div style="border-radius: 8px; overflow: hidden; border: 1px solid var(--border-glass);">
+          <img src="/static/images/trinetra-robot.png" alt="Trinetra Camera System" style="width: 100%; height: 160px; object-fit: cover; object-position: 50% 25%;">
+        </div>
+
+        <div class="drawer-telemetry-list">
+          <div class="drawer-telemetry-row">
+            <span>Camera Enclosure</span>
+            <span>Cube Anodized Housing</span>
+          </div>
+          <div class="drawer-telemetry-row">
+            <span>Nocturnal Floodlights</span>
+            <span>8-LED High-CRI Ring</span>
+          </div>
+          <div class="drawer-telemetry-row">
+            <span>Auxiliary Display</span>
+            <span>Green 16x2 LCD Telemetry</span>
+          </div>
+          <div class="drawer-telemetry-row">
+            <span>Supported Streams</span>
+            <span>MJPEG / HTTP / WebRTC</span>
+          </div>
+        </div>
+
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+          <a href="/robot" class="btn-cyber" style="justify-content: center;">Inspect 3D Camera Module →</a>
+          <a href="/" class="btn-cyber btn-amber" style="justify-content: center;">Return to Mission Cockpit</a>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Camera Stream Configuration Modal -->
+  <div class="tactical-modal-backdrop" id="cameraConfigModal">
+    <div class="tactical-modal">
+      <div class="panel-header">
+        <div class="panel-title">Configure Camera Stream</div>
+        <button class="btn-icon" id="btnCloseCamConfigModal">✕</button>
+      </div>
+
+      <form id="cameraConfigForm">
+        <label style="font-size: 0.8rem; color: var(--text-muted);">
+          Stream Endpoint URL (Browser-Compatible HTTP, MJPEG, or HLS)
+        </label>
+        <input type="text" id="camStreamUrlInput" class="cyber-input" placeholder="e.g. http://192.168.1.100:8080/video or http://localhost:8889/cam/stream.mjpg">
+
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Stream Protocol</label>
+        <select id="camProtocolSelect" class="cyber-input">
+          <option value="mjpeg">MJPEG (Motion JPEG)</option>
+          <option value="http">Direct HTTP Video</option>
+          <option value="hls">HLS (HTTP Live Streaming)</option>
+          <option value="webrtc">WebRTC</option>
+        </select>
+
+        <div style="font-size: 0.72rem; color: var(--text-dim); margin-bottom: 1rem;">
+          ℹ Security notice: Passwords embedded in URLs will be sanitized and never exposed in public API status responses.
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+          <button type="button" class="btn-cyber" onclick="document.getElementById('cameraConfigModal').classList.remove('open')">Cancel</button>
+          <button type="submit" class="btn-cyber btn-amber">Save Stream Configuration</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- RTSP & MediaMTX Gateway Setup Guide Modal -->
+  <div class="tactical-modal-backdrop" id="rtspGatewayGuideModal">
+    <div class="tactical-modal" style="max-width: 680px;">
+      <div class="panel-header">
+        <div class="panel-title">RTSP to Web Gateway Guide (e.g. V380 Pro / IP Cameras)</div>
+        <button class="btn-icon" id="btnCloseRtspGuideModal">✕</button>
+      </div>
+
+      <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; display: flex; flex-direction: column; gap: 0.85rem;">
+        <p>
+          <strong style="color: #fff;">Why can't browsers play RTSP directly?</strong><br>
+          Browsers (Chrome, Firefox, Edge) do not natively support raw RTSP protocols. Standalone Wi-Fi cameras like the <strong>V380 Pro</strong> or ONVIF IP cameras typically output an RTSP stream (e.g. <code>rtsp://192.168.1.50:554/live/ch0</code>).
+        </p>
+
+        <p>
+          <strong style="color: var(--accent-cyan);">Recommended Solution: MediaMTX or go2rtc Gateway</strong>
+        </p>
+        <ol style="margin-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem;">
+          <li>Download the lightweight single-binary gateway <strong style="color: #fff;">MediaMTX</strong> (open source, zero install) or <strong style="color: #fff;">go2rtc</strong>.</li>
+          <li>In <code>mediamtx.yml</code>, add your camera path:
+            <pre style="background: rgba(5,8,17,0.9); padding: 8px; border-radius: 6px; font-family: monospace; color: var(--accent-yellow); margin-top: 4px;">
+paths:
+  trinetra_cam:
+    source: rtsp://admin:password@192.168.1.50:554/live/ch0
+            </pre>
+          </li>
+          <li>Run <code>mediamtx.exe</code>. It automatically exposes an instant browser-compatible stream at:<br>
+            <code style="color: var(--accent-cyan);">http://localhost:8889/trinetra_cam/</code> (WebRTC / HLS / MJPEG).
+          </li>
+          <li>Paste that URL into the <strong>Configure Stream</strong> modal on this page!</li>
+        </ol>
+      </div>
+
+      <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end;">
+        <button class="btn-cyber" onclick="document.getElementById('rtspGatewayGuideModal').classList.remove('open')">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script src="/static/js/camera.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      new TrinetraCameraController();
+    });
+  </script>
+
+</body>
+</html>

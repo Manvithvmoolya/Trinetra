@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRINETRA — 3D Robot Explorer & Component Disassembly</title>
+  <meta name="description" content="Interactive 3D component explorer and exploded-view engineering breakdown of the Trinetra landmine detection robot.">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+</head>
+<body>
+
+  <!-- Tactical Header -->
+  <header class="tactical-header">
+    <a href="/" class="brand-section">
+      <div class="brand-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="brand-titles">
+        <h1>TRINETRA <span class="brand-badge">3D EXPLORER</span></h1>
+        <p>EXPLODED-VIEW COMPONENT ARCHITECTURE</p>
+      </div>
+    </a>
+
+    <ul class="nav-links" id="navLinks">
+      <li class="nav-item"><a href="/">Cockpit</a></li>
+      <li class="nav-item active"><a href="/robot">3D Explorer</a></li>
+      <li class="nav-item"><a href="/camera">Optical Stream</a></li>
+      <li class="nav-item"><a href="/gps">Tactical Map</a></li>
+      <li class="nav-item"><a href="/sensors">Induction Core</a></li>
+      <li class="nav-item"><a href="/system">Diagnostics</a></li>
+    </ul>
+
+    <div class="header-status-group">
+      <div class="status-pill">
+        <span class="status-dot pulse" id="globalStatusDot"></span>
+        <span id="globalStatusText">ONLINE</span>
+      </div>
+      <a href="/" class="btn-cyber">← Back to Cockpit</a>
+    </div>
+  </header>
+
+  <main class="app-container" style="max-width: 1800px;">
+
+    <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr; margin-bottom: 1.5rem;">
+
+      <!-- Full-Feature 3D Viewport Panel -->
+      <section class="glass-panel" style="padding: 1rem;">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 14.93V17a1 1 0 11-2 0v-.07A7.003 7.003 0 015.07 11H5a1 1 0 110-2h.07A7.003 7.003 0 0111 2.07V2a1 1 0 112 0v.07A7.003 7.003 0 0118.93 9H19a1 1 0 110 2h-.07A7.003 7.003 0 0113 16.93z"/></svg>
+            High-Fidelity Procedural 3D Model
+          </div>
+          <div class="panel-actions">
+            <button class="btn-cyber btn-amber" id="btnExplodeComponents">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              Explore Components
+            </button>
+            <button class="btn-cyber" id="btnResetCamera">↺ Reset Angle</button>
+            <button class="btn-icon active" id="btnToggleAutoRotate" title="Auto-Rotate">⟳</button>
+            <button class="btn-icon" id="btnToggleHeadlights" title="Toggle Floodlights">💡</button>
+          </div>
+        </div>
+
+        <div class="robot-viewport-wrapper" id="robotExplorerContainer" style="height: 650px;">
+          <!-- Top HUD Badges -->
+          <div class="viewport-hud-top">
+            <div class="hud-badge" id="hudHoveredPartName">TRINETRA MK-1 • READY</div>
+            <div class="hud-badge" style="color: var(--accent-cyan);">CLICK ANY MODULE TO ISOLATE</div>
+          </div>
+
+          <!-- Bottom Controls -->
+          <div class="viewport-controls-bottom">
+            <div class="hud-button-group">
+              <button class="btn-cyber" onclick="window.isolatePart('camera')">01: Camera</button>
+              <button class="btn-cyber" onclick="window.isolatePart('gps')">02: GPS</button>
+              <button class="btn-cyber" onclick="window.isolatePart('metaldetector')">03: Detector</button>
+              <button class="btn-cyber" onclick="window.isolatePart('controller')">04: ESP32</button>
+              <button class="btn-cyber" onclick="window.isolatePart('battery_drive')">05: 4WD</button>
+              <button class="btn-cyber btn-amber" onclick="window.isolatePart('all')">Show All</button>
+            </div>
+          </div>
+
+          <!-- Module Inspector Slide-Out Drawer -->
+          <div class="module-inspector-drawer" id="moduleInspectorDrawer">
+            <div class="drawer-header">
+              <span class="drawer-module-tag" id="drawerTag">MODULE SPEC</span>
+              <button class="btn-icon" id="btnCloseDrawer">✕</button>
+            </div>
+            <h4 class="drawer-title" id="drawerTitle">Module Title</h4>
+            <p class="drawer-desc" id="drawerDesc">Module operational description.</p>
+            <div class="drawer-telemetry-list" id="drawerSpecsList"></div>
+            <a href="#" class="btn-cyber" id="drawerInspectLink" style="width: 100%; justify-content: center;">Inspect Module →</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Side Panel: Visual Design Reference Comparison -->
+      <section class="glass-panel" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            Original Hardware Reference
+          </div>
+          <span class="status-pill" style="font-size: 11px; color: var(--accent-yellow);">PHYSICAL PROTOTYPE</span>
+        </div>
+
+        <div style="border-radius: 8px; overflow: hidden; border: 1px solid var(--border-glass); background: #04060b;">
+          <img src="/static/images/trinetra-robot.png" alt="Trinetra Landmine Detection Robot Prototype" style="width: 100%; height: auto; display: block; object-fit: cover;">
+        </div>
+
+        <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+          <strong style="color: #fff;">Hardware Construction Specifications:</strong>
+          <ul style="margin-left: 1.2rem; margin-top: 0.4rem; display: flex; flex-direction: column; gap: 0.3rem;">
+            <li><strong>Chassis:</strong> Anodized dual-deck aluminum frame with brushed steel side rails.</li>
+            <li><strong>Drive:</strong> 4 high-traction knobby rubber wheels with signature <strong>yellow 5-spoke rims</strong>.</li>
+            <li><strong>Vision:</strong> Front camera cube with 8-LED ring and auxiliary green 16x2 LCD status display.</li>
+            <li><strong>GNSS:</strong> Elevated vertical mast with white rounded puck GPS receiver.</li>
+            <li><strong>Detection:</strong> Front boom arm, stepped oscillator cylinder, and circular 8-spoke induction coil.</li>
+            <li><strong>Controller:</strong> Dual-core ESP32 MCU, blue IMU breakout, and brass-mounted whip antenna.</li>
+          </ul>
+        </div>
+
+        <div style="margin-top: auto; padding-top: 0.5rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between;">
+          <span style="font-size: 0.72rem; color: var(--text-dim);">FILE: static/images/trinetra-robot.png</span>
+          <span style="font-size: 0.72rem; color: var(--accent-green);">100% SPEC COMPLIANT</span>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <script src="/static/js/main.js"></script>
+  <script src="/static/js/robot3d.js"></script>
+  <script src="/static/js/explodedView.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const viewer = new TrinetraRobot3D('robotExplorerContainer');
+      const exploded = new TrinetraExplodedView(viewer);
+
+      // Part isolation helper
+      window.isolatePart = function(partKey) {
+        if (!viewer || !viewer.modules) return;
+        const m = viewer.modules;
+
+        if (partKey === 'all') {
+          Object.values(m).forEach(group => {
+            if (group) group.visible = true;
+          });
+          viewer.resetCamera();
+          return;
+        }
+
+        Object.entries(m).forEach(([key, group]) => {
+          if (group) {
+            group.visible = (key === partKey || key === 'chassis');
+          }
+        });
+
+        // Trigger detail card
+        exploded.showModuleCard(partKey);
+      };
+    });
+  </script>
+
+</body>
+</html>

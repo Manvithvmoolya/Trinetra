@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRINETRA — Tactical GPS Navigation & Location Pinning</title>
+  <meta name="description" content="Module 2: Sub-meter tactical GPS tracking, waypoint pinning, and landmine breadcrumb navigation.">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+  <!-- Tactical Header -->
+  <header class="tactical-header">
+    <a href="/" class="brand-section">
+      <div class="brand-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="brand-titles">
+        <h1>TRINETRA <span class="brand-badge">TACTICAL MAP</span></h1>
+        <p>MODULE 02 • GNSS POSITIONING & WAYPOINT PINNING</p>
+      </div>
+    </a>
+
+    <ul class="nav-links" id="navLinks">
+      <li class="nav-item"><a href="/">Cockpit</a></li>
+      <li class="nav-item"><a href="/robot">3D Explorer</a></li>
+      <li class="nav-item"><a href="/camera">Optical Stream</a></li>
+      <li class="nav-item active"><a href="/gps">Tactical Map</a></li>
+      <li class="nav-item"><a href="/sensors">Induction Core</a></li>
+      <li class="nav-item"><a href="/system">Diagnostics</a></li>
+    </ul>
+
+    <div class="header-status-group">
+      <div class="status-pill">
+        <span class="status-dot pulse" id="globalStatusDot"></span>
+        <span id="globalStatusText">ONLINE</span>
+      </div>
+      <a href="/" class="btn-cyber">← Back to Cockpit</a>
+    </div>
+  </header>
+
+  <main class="app-container" style="max-width: 1800px;">
+
+    <!-- Top GPS Navigation Stats Bar -->
+    <section class="telemetry-summary-row" style="margin-bottom: 1rem;">
+      <div class="stat-card">
+        <span class="stat-label">Latitude</span>
+        <div class="stat-value" id="mapHudLatitude">12.914100</div>
+        <div class="stat-subtext" id="mapHudSourceBadge" style="color: var(--accent-yellow);">DEMO / SIMULATED GPS</div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Longitude</span>
+        <div class="stat-value" id="mapHudLongitude">74.856000</div>
+        <div class="stat-subtext">Coordinate Reference: WGS 84</div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Ground Velocity</span>
+        <div class="stat-value" id="mapHudSpeed">0.0 m/s</div>
+        <div class="stat-subtext">Rover Speed Telemetry</div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Last GPS Fix</span>
+        <div class="stat-value" id="mapHudTimestamp" style="font-size: 1.15rem;">--:--:--</div>
+        <div class="stat-subtext">10 Hz Satellite Receiver Link</div>
+      </div>
+    </section>
+
+    <div class="dashboard-grid" style="grid-template-columns: 2.5fr 1fr;">
+
+      <!-- Full-Feature Tactical Map Panel -->
+      <section class="glass-panel" style="padding: 1rem;">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Operational Map & Pinning Console
+          </div>
+          <div class="panel-actions">
+            <button class="btn-cyber" id="btnPinCurrentLocation">📌 Pin Current Location</button>
+            <button class="btn-cyber btn-amber" id="btnToggleDropPinMode">📍 Drop Pin Mode</button>
+            <button class="btn-cyber" id="btnCenterMap">🎯 Center Robot</button>
+            <button class="btn-icon" id="btnToggleFollow" title="Auto-Follow Robot">🧭 Follow</button>
+          </div>
+        </div>
+
+        <div class="map-panel-wrapper" style="height: 650px;">
+          <div class="leaflet-map-container" id="tacticalGpsMap"></div>
+
+          <!-- Bottom Map Tools -->
+          <div class="map-toolbar">
+            <button class="btn-cyber" onclick="window.clearBreadcrumbs()">Clear Breadcrumbs</button>
+            <button class="btn-cyber btn-red" onclick="window.clearAllPins()">Clear All Pins</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tactical Pinned Locations & Waypoints Manager Sidebar -->
+      <section class="glass-panel" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+            Pinned Tactical Points
+          </div>
+          <span class="status-pill" style="font-size: 11px;">BOOKMARKS</span>
+        </div>
+
+        <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.45;">
+          Click <strong style="color: var(--accent-cyan);">"Pin Current"</strong> or activate <strong style="color: var(--accent-yellow);">"Drop Pin Mode"</strong> to bookmark suspected landmines, rendezvous points, or obstacles.
+        </p>
+
+        <div id="pinnedLocationsList" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 440px; overflow-y: auto;">
+          <!-- Dynamically populated -->
+        </div>
+
+        <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 0.5rem;">
+          <button class="btn-cyber" onclick="window.exportPinsJson()" style="justify-content: center;">Export Waypoints (JSON) 📥</button>
+          <a href="/robot" class="btn-cyber btn-amber" style="justify-content: center;">Inspect 3D GPS Mast →</a>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <script src="/static/js/main.js"></script>
+  <script src="/static/js/map.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const gpsMap = new TrinetraMap('tacticalGpsMap', { zoom: 17 });
+      window.TrinetraActiveMap = gpsMap;
+
+      // Clear breadcrumbs helper
+      window.clearBreadcrumbs = function() {
+        if (gpsMap && gpsMap.breadcrumbPolyline) {
+          gpsMap.breadcrumbPolyline.setLatLngs([]);
+        }
+      };
+
+      // Clear all pins helper
+      window.clearAllPins = async function() {
+        if (confirm("Clear all pinned locations from map?")) {
+          await fetch('/api/location/pins', { method: 'DELETE' });
+          gpsMap.loadPinnedLocations();
+        }
+      };
+
+      // Export pins JSON
+      window.exportPinsJson = async function() {
+        const res = await fetch('/api/location/pins');
+        if (res.ok) {
+          const data = await res.json();
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `trinetra-waypoints-${Date.now()}.json`;
+          a.click();
+        }
+      };
+    });
+  </script>
+
+</body>
+</html>

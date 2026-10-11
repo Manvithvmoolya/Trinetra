@@ -24,6 +24,7 @@ class TrinetraMap {
     this.currentProvider = localStorage.getItem('trinetra_map_provider') || 'carto_dark';
     this.apiKey = localStorage.getItem('trinetra_map_api_key') || '';
     this.currentTileLayer = null;
+    this.pinnedMarkers = new Map();
 
     this.initMap();
     this.initControls();
@@ -33,13 +34,28 @@ class TrinetraMap {
   }
 
   initMap() {
+    if (typeof L === 'undefined') {
+      console.error("[TRINETRA MAP] Critical Error: Leaflet library 'L' is undefined!");
+      if (this.container) {
+        this.container.innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#ef4444;font-family:monospace;text-align:center;padding:2rem;">
+            <div style="font-size:2rem;margin-bottom:0.5rem;">⚠️</div>
+            <div style="font-weight:bold;font-size:1.1rem;">LEAFLET ENGINE FAILED TO LOAD</div>
+            <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">Please check local script assets or internet connectivity.</p>
+          </div>
+        `;
+      }
+      return;
+    }
+
     // Default Mangalore/Udupi reference coordinates or last saved
     const initialCoords = [12.9141, 74.8560];
 
     this.map = L.map(this.containerId, {
       center: initialCoords,
       zoom: this.options.zoom,
-      zoomControl: false
+      zoomControl: false,
+      preferCanvas: false
     });
 
     // Zoom controls top-left
@@ -90,6 +106,12 @@ class TrinetraMap {
         this.promptDropPinAt(e.latlng.lat, e.latlng.lng);
       }
     });
+
+    // Invalidate map size multiple times to ensure proper rendering inside flex/grid containers
+    setTimeout(() => { if (this.map) this.map.invalidateSize(true); }, 150);
+    setTimeout(() => { if (this.map) this.map.invalidateSize(true); }, 500);
+    setTimeout(() => { if (this.map) this.map.invalidateSize(true); }, 1200);
+    window.addEventListener('resize', () => { if (this.map) this.map.invalidateSize(true); });
   }
 
   initControls() {
@@ -157,75 +179,143 @@ class TrinetraMap {
         if (selectProvider) selectProvider.value = this.currentProvider;
       });
     }
+
+    // Direct Quick Switcher Buttons (OSM, Dark, Satellite)
+    const btnQuickOsm = document.getElementById('btnQuickTileOsm');
+    if (btnQuickOsm) {
+      btnQuickOsm.addEventListener('click', () => this.applyTileLayer('osm_standard'));
+    }
+    const btnQuickDark = document.getElementById('btnQuickTileDark');
+    if (btnQuickDark) {
+      btnQuickDark.addEventListener('click', () => this.applyTileLayer('carto_dark'));
+    }
+    const btnQuickSat = document.getElementById('btnQuickTileSat');
+    if (btnQuickSat) {
+      btnQuickSat.addEventListener('click', () => this.applyTileLayer('google_hybrid'));
+    }
   }
 
   applyTileLayer(provider, apiKey = '') {
+    if (!this.map) return;
+
     if (this.currentTileLayer) {
-      this.map.removeLayer(this.currentTileLayer);
+      try {
+        this.map.removeLayer(this.currentTileLayer);
+      } catch (e) {}
     }
 
-    let tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-    let attribution = '&copy; OpenStreetMap &copy; CARTO';
-    let options = { maxZoom: 20, subdomains: 'abcd' };
+    // Guard: If provider requires a commercial API key but none is present, fallback gracefully!
+    const keyRequiredProviders = ['mapbox_dark', 'mapbox_satellite', 'maptiler_dark', 'maptiler_satellite', 'stadia_dark'];
+    if (keyRequiredProviders.includes(provider) && (!apiKey || apiKey.trim().length < 8)) {
+      console.warn(`[TRINETRA MAP] Provider '${provider}' requires an API key. Falling back to OpenStreetMap.`);
+      provider = 'osm_standard';
+      apiKey = '';
+    }
+
+    let tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    let attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    let options = { maxZoom: 19, crossOrigin: true };
 
     switch (provider) {
-      case 'mapbox_dark':
-        tileUrl = `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${apiKey}`;
-        attribution = '&copy; Mapbox &copy; OpenStreetMap';
-        options = { tileSize: 512, zoomOffset: -1, maxZoom: 22 };
-        break;
-
-      case 'mapbox_satellite':
-        tileUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${apiKey}`;
-        attribution = '&copy; Mapbox &copy; Maxar';
-        options = { tileSize: 512, zoomOffset: -1, maxZoom: 22 };
-        break;
-
-      case 'maptiler_dark':
-        tileUrl = `https://api.maptiler.com/maps/backdrop-dark/{z}/{x}/{y}.png?key=${apiKey}`;
-        attribution = '&copy; MapTiler &copy; OpenStreetMap';
-        options = { tileSize: 512, zoomOffset: -1, maxZoom: 20 };
-        break;
-
-      case 'maptiler_satellite':
-        tileUrl = `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${apiKey}`;
-        attribution = '&copy; MapTiler &copy; Maxar';
-        options = { tileSize: 512, zoomOffset: -1, maxZoom: 20 };
-        break;
-
-      case 'stadia_dark':
-        tileUrl = `https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key=${apiKey}`;
-        attribution = '&copy; Stadia Maps &copy; OpenStreetMap';
-        options = { maxZoom: 20 };
-        break;
-
-      case 'osm_standard':
-        tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-        attribution = '&copy; OpenStreetMap contributors';
-        options = { maxZoom: 19 };
+      case 'carto_dark':
+        // Reliable Carto CDN url without retina formatting issues
+        tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+        attribution = '&copy; OpenStreetMap &copy; CARTO';
+        options = { maxZoom: 20, subdomains: 'abcd', crossOrigin: true };
         break;
 
       case 'google_hybrid':
         tileUrl = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
         attribution = '&copy; Google Maps';
-        options = { maxZoom: 21 };
+        options = { maxZoom: 21, crossOrigin: true };
         break;
 
-      case 'carto_dark':
+      case 'esri_satellite':
+        tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+        attribution = '&copy; Esri &copy; Maxar';
+        options = { maxZoom: 19, crossOrigin: true };
+        break;
+
+      case 'mapbox_dark':
+        tileUrl = `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${apiKey}`;
+        attribution = '&copy; Mapbox &copy; OpenStreetMap';
+        options = { tileSize: 512, zoomOffset: -1, maxZoom: 22, crossOrigin: true };
+        break;
+
+      case 'mapbox_satellite':
+        tileUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${apiKey}`;
+        attribution = '&copy; Mapbox &copy; Maxar';
+        options = { tileSize: 512, zoomOffset: -1, maxZoom: 22, crossOrigin: true };
+        break;
+
+      case 'maptiler_dark':
+        tileUrl = `https://api.maptiler.com/maps/backdrop-dark/{z}/{x}/{y}.png?key=${apiKey}`;
+        attribution = '&copy; MapTiler &copy; OpenStreetMap';
+        options = { tileSize: 512, zoomOffset: -1, maxZoom: 20, crossOrigin: true };
+        break;
+
+      case 'maptiler_satellite':
+        tileUrl = `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${apiKey}`;
+        attribution = '&copy; MapTiler &copy; Maxar';
+        options = { tileSize: 512, zoomOffset: -1, maxZoom: 20, crossOrigin: true };
+        break;
+
+      case 'stadia_dark':
+        tileUrl = `https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png?api_key=${apiKey}`;
+        attribution = '&copy; Stadia Maps &copy; OpenStreetMap';
+        options = { maxZoom: 20, crossOrigin: true };
+        break;
+
+      case 'osm_standard':
       default:
-        tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-        attribution = '&copy; OpenStreetMap &copy; CARTO';
-        options = { maxZoom: 20, subdomains: 'abcd' };
+        provider = 'osm_standard';
+        tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+        attribution = '&copy; OpenStreetMap contributors';
+        options = { maxZoom: 19, crossOrigin: true };
         break;
     }
 
     options.attribution = attribution;
-    this.currentTileLayer = L.tileLayer(tileUrl, options).addTo(this.map);
+    
+    try {
+      this.currentTileLayer = L.tileLayer(tileUrl, options).addTo(this.map);
+
+      // Auto-fallback listener if tiles fail on current provider
+      let failCount = 0;
+      this.currentTileLayer.on('tileerror', () => {
+        failCount++;
+        if (failCount === 4) {
+          console.warn(`[TRINETRA MAP] Layer [${provider}] tile loading error. Auto-falling back to OpenStreetMap / Google.`);
+          if (provider !== 'osm_standard') {
+            this.applyTileLayer('osm_standard', '');
+          } else {
+            this.applyTileLayer('google_hybrid', '');
+          }
+        }
+      });
+    } catch (layerErr) {
+      console.error("[TRINETRA MAP] Error adding tile layer:", layerErr);
+    }
+
     this.currentProvider = provider;
     this.apiKey = apiKey;
 
     localStorage.setItem('trinetra_map_provider', provider);
     localStorage.setItem('trinetra_map_api_key', apiKey);
+
+    // Update layer UI pills if present
+    document.querySelectorAll('.btn-tile-quick').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.provider === provider);
+    });
+
+    const badge = document.getElementById('mapTileProviderBadge');
+    if (badge) {
+      badge.textContent = provider.toUpperCase().replace('_', ' ');
+    }
+
+    // Force map recalculation
+    setTimeout(() => { if (this.map) this.map.invalidateSize(true); }, 80);
+    setTimeout(() => { if (this.map) this.map.invalidateSize(true); }, 400);
   }
 
   initApiKeyModal() {
@@ -382,11 +472,16 @@ class TrinetraMap {
   }
 
   syncPins(pins) {
+    if (!pins || !Array.isArray(pins)) return;
+    if (!this.pinnedMarkers) this.pinnedMarkers = new Map();
+
     // Remove markers not in list
     const incomingIds = new Set(pins.map(p => p.id));
     for (const [id, marker] of this.pinnedMarkers.entries()) {
       if (!incomingIds.has(id)) {
-        this.map.removeLayer(marker);
+        if (this.map && marker) {
+          try { this.map.removeLayer(marker); } catch (e) {}
+        }
         this.pinnedMarkers.delete(id);
       }
     }

@@ -5,9 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TRINETRA — Tactical GPS Navigation & Location Pinning</title>
   <meta name="description" content="Module 2: Sub-meter tactical GPS tracking, waypoint pinning, and landmine breadcrumb navigation.">
+  <link rel="stylesheet" href="/static/css/leaflet.css">
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/js/leaflet.js"></script>
+  <script>
+    if (typeof L === 'undefined') {
+      document.write('<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">');
+      document.write('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\\/script>');
+    }
+  </script>
 </head>
 <body>
 
@@ -80,16 +86,19 @@
             Operational Map & Pinning Console
           </div>
           <div class="panel-actions">
-            <button class="btn-cyber" id="btnPinCurrentLocation">📌 Pin Current Location</button>
-            <button class="btn-cyber btn-amber" id="btnToggleDropPinMode">📍 Drop Pin Mode</button>
-            <button class="btn-cyber" id="btnCenterMap">🎯 Center Robot</button>
+            <button class="btn-tile-quick" id="btnQuickTileOsm" data-provider="osm_standard" title="OpenStreetMap Standard">🗺 OSM</button>
+            <button class="btn-tile-quick" id="btnQuickTileDark" data-provider="carto_dark" title="Carto Dark Tactical">🌑 Dark</button>
+            <button class="btn-tile-quick" id="btnQuickTileSat" data-provider="google_hybrid" title="Satellite Hybrid">🛰 Sat</button>
+            <button class="btn-cyber" id="btnPinCurrentLocation">📌 Pin Current</button>
+            <button class="btn-cyber btn-amber" id="btnToggleDropPinMode">📍 Drop Pin</button>
+            <button class="btn-cyber" id="btnCenterMap">🎯 Center</button>
             <button class="btn-icon" id="btnToggleFollow" title="Auto-Follow Robot">🧭 Follow</button>
             <button class="btn-icon" id="btnOpenMapKeyModal" title="Map Provider & API Key Settings">⚙</button>
           </div>
         </div>
 
-        <div class="map-panel-wrapper" style="height: 650px;">
-          <div class="leaflet-map-container" id="tacticalGpsMap"></div>
+        <div class="map-panel-wrapper" style="height: 650px; min-height: 650px;">
+          <div class="leaflet-map-container" id="tacticalGpsMap" style="width: 100%; height: 650px; min-height: 650px;"></div>
 
           <!-- Bottom Map Tools -->
           <div class="map-toolbar">

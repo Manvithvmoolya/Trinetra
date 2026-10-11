@@ -664,10 +664,68 @@ body {
   border: 1px solid rgba(0, 240, 255, 0.12);
 }
 
+.btn-tile-quick {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 0.3rem 0.65rem;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.2s ease;
+}
+
+.btn-tile-quick:hover {
+  background: rgba(0, 240, 255, 0.12);
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+}
+
+.btn-tile-quick.active {
+  background: var(--accent-cyan);
+  color: #050811;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px var(--accent-cyan-glow);
+}
+
 .leaflet-map-container {
-  width: 100%;
-  height: 100%;
-  background: #090e18;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 480px !important;
+  background: #111827 !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Ensure Leaflet tiles and images render without CSS clipping or hiding */
+.leaflet-container {
+  background: #111827 !important;
+}
+
+.leaflet-tile {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.leaflet-tile-loaded {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#homeLeafletMap {
+  width: 100% !important;
+  height: 520px !important;
+  min-height: 520px !important;
+}
+
+#tacticalGpsMap {
+  width: 100% !important;
+  height: 650px !important;
+  min-height: 650px !important;
 }
 
 .map-floating-hud {

@@ -5,12 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TRINETRA — Indigenous Landmine Detection System</title>
   <meta name="description" content="Mission control dashboard and interactive 3D telemetry monitoring for the Trinetra Indigenous Landmine Detection Robot rover.">
+  <link rel="stylesheet" href="/static/css/leaflet.css">
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="/static/js/leaflet.js"></script>
+  <script>
+    if (typeof L === 'undefined') {
+      document.write('<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">');
+      document.write('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\\/script>');
+    }
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -162,8 +168,11 @@
             Live Tactical GPS Map
           </div>
           <div class="panel-actions">
-            <button class="btn-cyber" id="btnPinCurrentLocation" title="Pin current robot coordinates">📌 Pin Current</button>
-            <button class="btn-cyber btn-amber" id="btnToggleDropPinMode" title="Click anywhere on map to drop pin">📍 Drop Pin</button>
+            <button class="btn-tile-quick" id="btnQuickTileOsm" data-provider="osm_standard" title="OpenStreetMap Standard">🗺 OSM</button>
+            <button class="btn-tile-quick" id="btnQuickTileDark" data-provider="carto_dark" title="Carto Dark Tactical">🌑 Dark</button>
+            <button class="btn-tile-quick" id="btnQuickTileSat" data-provider="google_hybrid" title="Satellite Hybrid">🛰 Sat</button>
+            <button class="btn-cyber" id="btnPinCurrentLocation" title="Pin current robot coordinates">📌 Pin</button>
+            <button class="btn-cyber btn-amber" id="btnToggleDropPinMode" title="Click anywhere on map to drop pin">📍 Drop</button>
             <button class="btn-icon" id="btnTogglePinnedList" title="View Pinned Locations">📑</button>
             <button class="btn-icon" id="btnOpenMapKeyModal" title="Map Provider & API Key Settings">⚙</button>
             <a href="/gps" class="btn-icon" title="Full Map View">⛶</a>
@@ -171,13 +180,14 @@
         </div>
 
         <div class="map-panel-wrapper">
-          <div class="leaflet-map-container" id="homeLeafletMap"></div>
+          <div class="leaflet-map-container" id="homeLeafletMap" style="width: 100%; height: 520px; min-height: 520px;"></div>
 
           <!-- Floating Coordinates HUD -->
           <div class="map-floating-hud">
             <div>LAT: <span id="mapHudLatitude" style="color: #fff;">12.914100</span></div>
             <div>LON: <span id="mapHudLongitude" style="color: #fff;">74.856000</span></div>
             <div>SPD: <span id="mapHudSpeed" style="color: var(--accent-cyan);">0.0 m/s</span></div>
+            <div>LAYER: <span id="mapTileProviderBadge" style="color: var(--accent-yellow); font-size: 10px;">OSM STANDARD</span></div>
             <div id="mapHudSourceBadge" style="font-size: 10px; color: var(--accent-yellow);">DEMO / SIMULATED GPS</div>
           </div>
 
@@ -345,16 +355,32 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // 1. Initialize 3D Robot Scene
-      const robotViewer = new TrinetraRobot3D('robotViewerContainer');
-      const explodedCtrl = new TrinetraExplodedView(robotViewer);
+      // 1. Initialize Tactical Map (Priority)
+      try {
+        const tacticalMap = new TrinetraMap('homeLeafletMap');
+        window.TrinetraActiveMap = tacticalMap;
+      } catch (mapErr) {
+        console.error("[TRINETRA] Error initializing Tactical Map:", mapErr);
+      }
 
-      // 2. Initialize Tactical Map
-      const tacticalMap = new TrinetraMap('homeLeafletMap');
-      window.TrinetraActiveMap = tacticalMap;
+      // 2. Initialize 3D Robot Viewer
+      try {
+        if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls !== 'undefined') {
+          const robotViewer = new TrinetraRobot3D('robotViewerContainer');
+          const explodedCtrl = new TrinetraExplodedView(robotViewer);
+        } else {
+          console.warn("[TRINETRA] Three.js or OrbitControls not available.");
+        }
+      } catch (robotErr) {
+        console.error("[TRINETRA] Error initializing 3D Robot viewer:", robotErr);
+      }
 
       // 3. Initialize Telemetry UI
-      new TrinetraTelemetryUI();
+      try {
+        new TrinetraTelemetryUI();
+      } catch (telemErr) {
+        console.error("[TRINETRA] Error initializing Telemetry UI:", telemErr);
+      }
     });
   </script>
 

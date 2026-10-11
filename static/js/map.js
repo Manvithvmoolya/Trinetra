@@ -21,14 +21,15 @@ class TrinetraMap {
     this.robotMarker = null;
     this.breadcrumbPolyline = null;
     this.autoFollow = this.options.autoFollow;
-    this.currentLocation = null;
-    this.pinModeActive = false;
-    this.pinnedMarkers = new Map();
+    this.currentProvider = localStorage.getItem('trinetra_map_provider') || 'carto_dark';
+    this.apiKey = localStorage.getItem('trinetra_map_api_key') || '';
+    this.currentTileLayer = null;
 
     this.initMap();
     this.initControls();
     this.loadPinnedLocations();
     this.subscribeTelemetry();
+    this.initApiKeyModal();
   }
 
   initMap() {
@@ -44,12 +45,8 @@ class TrinetraMap {
     // Zoom controls top-left
     L.control.zoom({ position: 'topleft' }).addTo(this.map);
 
-    // Dark Tactical Tile Layer (CartoDB Dark Matter with OSM Fallback)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20
-    }).addTo(this.map);
+    // Apply initial configured or default tile layer
+    this.applyTileLayer(this.currentProvider, this.apiKey);
 
     // Breadcrumb polyline
     this.breadcrumbPolyline = L.polyline([], {
@@ -145,6 +142,110 @@ class TrinetraMap {
     if (btnViewPins && pinsDrawer) {
       btnViewPins.addEventListener('click', () => {
         pinsDrawer.classList.toggle('show');
+      });
+    }
+
+    // Open Map Settings / API Key modal button
+    const btnOpenKeyModal = document.getElementById('btnOpenMapKeyModal');
+    const keyModal = document.getElementById('mapApiKeyModal');
+    if (btnOpenKeyModal && keyModal) {
+      btnOpenKeyModal.addEventListener('click', () => {
+        keyModal.classList.add('open');
+        const inputKey = document.getElementById('inputMapApiKey');
+        const selectProvider = document.getElementById('selectMapProvider');
+        if (inputKey) inputKey.value = this.apiKey;
+        if (selectProvider) selectProvider.value = this.currentProvider;
+      });
+    }
+  }
+
+  applyTileLayer(provider, apiKey = '') {
+    if (this.currentTileLayer) {
+      this.map.removeLayer(this.currentTileLayer);
+    }
+
+    let tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    let attribution = '&copy; OpenStreetMap &copy; CARTO';
+    let options = { maxZoom: 20, subdomains: 'abcd' };
+
+    switch (provider) {
+      case 'mapbox_dark':
+        tileUrl = `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${apiKey}`;
+        attribution = '&copy; Mapbox &copy; OpenStreetMap';
+        options = { tileSize: 512, zoomOffset: -1, maxZoom: 22 };
+        break;
+
+      case 'mapbox_satellite':
+        tileUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${apiKey}`;
+        attribution = '&copy; Mapbox &copy; Maxar';
+        options = { tileSize: 512, zoomOffset: -1, maxZoom: 22 };
+        break;
+
+      case 'maptiler_dark':
+        tileUrl = `https://api.maptiler.com/maps/backdrop-dark/{z}/{x}/{y}.png?key=${apiKey}`;
+        attribution = '&copy; MapTiler &copy; OpenStreetMap';
+        options = { tileSize: 512, zoomOffset: -1, maxZoom: 20 };
+        break;
+
+      case 'maptiler_satellite':
+        tileUrl = `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${apiKey}`;
+        attribution = '&copy; MapTiler &copy; Maxar';
+        options = { tileSize: 512, zoomOffset: -1, maxZoom: 20 };
+        break;
+
+      case 'stadia_dark':
+        tileUrl = `https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key=${apiKey}`;
+        attribution = '&copy; Stadia Maps &copy; OpenStreetMap';
+        options = { maxZoom: 20 };
+        break;
+
+      case 'osm_standard':
+        tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        attribution = '&copy; OpenStreetMap contributors';
+        options = { maxZoom: 19 };
+        break;
+
+      case 'google_hybrid':
+        tileUrl = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
+        attribution = '&copy; Google Maps';
+        options = { maxZoom: 21 };
+        break;
+
+      case 'carto_dark':
+      default:
+        tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        attribution = '&copy; OpenStreetMap &copy; CARTO';
+        options = { maxZoom: 20, subdomains: 'abcd' };
+        break;
+    }
+
+    options.attribution = attribution;
+    this.currentTileLayer = L.tileLayer(tileUrl, options).addTo(this.map);
+    this.currentProvider = provider;
+    this.apiKey = apiKey;
+
+    localStorage.setItem('trinetra_map_provider', provider);
+    localStorage.setItem('trinetra_map_api_key', apiKey);
+  }
+
+  initApiKeyModal() {
+    const modal = document.getElementById('mapApiKeyModal');
+    const form = document.getElementById('mapApiKeyForm');
+    const btnClose = document.getElementById('btnCloseMapKeyModal');
+
+    if (btnClose && modal) {
+      btnClose.addEventListener('click', () => modal.classList.remove('open'));
+    }
+
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const provider = document.getElementById('selectMapProvider').value;
+        const key = document.getElementById('inputMapApiKey').value.trim();
+
+        this.applyTileLayer(provider, key);
+        if (modal) modal.classList.remove('open');
+        alert(`Map tile provider updated to [${provider}]. Saved to settings!`);
       });
     }
   }

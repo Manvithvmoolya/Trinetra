@@ -72,6 +72,11 @@ async def serve_gps():
     return FileResponse(STATIC_DIR / "gps.html")
 
 
+@app.get("/map", include_in_schema=False)
+async def serve_map():
+    return FileResponse(STATIC_DIR / "gps.html")
+
+
 @app.get("/sensors", include_in_schema=False)
 async def serve_sensors():
     return FileResponse(STATIC_DIR / "sensors.html")

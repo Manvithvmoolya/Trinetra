@@ -31,3 +31,8 @@ ehthumbs.db
 *.zip
 *.tar.gz
 
+# TLS Certificates
+*.crt
+*.key
+
+

@@ -5,7 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TRINETRA — Optical Reconnaissance & Live Camera</title>
   <meta name="description" content="Module 1: Real-time optical video stream and forward hazardous terrain illumination monitoring.">
-  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="stylesheet" href="/static/css/styles.css" id="stylesCss">
+  <script>
+    if (window.location.protocol === 'file:') {
+      const sCss = document.getElementById('stylesCss');
+      if (sCss) sCss.href = 'css/styles.css';
+    }
+  </script>
 </head>
 <body>
 
@@ -51,8 +57,13 @@
             Live Optical Reconnaissance Feed
           </div>
           <div class="panel-actions">
-            <span class="status-pill" id="cameraStatusBadge" style="color: var(--text-muted);">STANDBY / NOT CONFIGURED</span>
-            <button class="btn-cyber" id="btnOpenCamConfigModal">⚙ Configure Stream</button>
+            <span class="status-pill" id="mediamtxStatusPill" style="font-size: 11px;">GATEWAY: CHECKING</span>
+            <button class="btn-cyber btn-amber" id="btnToggleMediaMtx" title="Start/Stop MediaMTX Gateway">▶ Start Gateway</button>
+            <button class="btn-tile-quick" id="btnPresetWebRtc" title="MediaMTX WebRTC Stream (Port 8889)">🚀 WebRTC</button>
+            <button class="btn-tile-quick" id="btnPresetHls" title="MediaMTX HLS Stream (Port 8888)">📺 HLS</button>
+            <button class="btn-tile-quick" id="btnPresetEsp32" title="ESP32-CAM MJPEG Stream">📷 ESP32</button>
+            <span class="status-pill" id="cameraStatusBadge" style="color: var(--text-muted);">STANDBY</span>
+            <button class="btn-cyber" id="btnOpenCamConfigModal">⚙ Settings</button>
             <button class="btn-icon" id="btnReloadCamStream" title="Refresh Stream">↺</button>
             <button class="btn-icon" id="btnCaptureSnapshot" title="Capture Snapshot">📷</button>
           </div>
@@ -61,7 +72,13 @@
         <div class="camera-screen-box">
           <div class="camera-crosshairs"></div>
 
-          <!-- Video Element or Image Stream -->
+          <!-- WebRTC Frame for MediaMTX WebRTC Stream Player -->
+          <iframe id="cameraLiveFeedFrame" class="camera-feed-frame" style="display: none;" allow="autoplay; fullscreen"></iframe>
+
+          <!-- Direct HTML5 Video Player for HLS / MP4 Streams -->
+          <video id="cameraLiveFeedVideo" class="camera-feed-video" style="display: none;" autoplay playsinline muted controls></video>
+
+          <!-- Image Stream for MJPEG / HTTP Endpoints -->
           <img id="cameraLiveFeedImg" class="camera-feed-img" style="display: none;" alt="Trinetra Live Camera Stream">
 
           <!-- Honest Placeholder (Shown when stream unconfigured) -->
@@ -69,13 +86,14 @@
             <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(0,240,255,0.1); border: 2px dashed var(--accent-cyan); display: flex; align-items: center; justify-content: center; font-size: 28px;">
               📹
             </div>
-            <h3 style="color: #fff; font-size: 1.15rem; font-weight: 600;">No Camera Stream Configured</h3>
-            <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
-              Connect an HTTP/MJPEG camera stream, ESP32-CAM endpoint, or RTSP gateway URL to activate live video monitoring.
+            <h3 style="color: #fff; font-size: 1.15rem; font-weight: 600;">No Camera Stream Connected</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; max-width: 480px;">
+              Stream from an RTSP camera via the built-in <strong>MediaMTX Gateway</strong>, an ESP32-CAM MJPEG feed, or an HTTP video URL.
             </p>
-            <div style="display: flex; gap: 0.6rem;">
+            <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center;">
+              <button class="btn-cyber btn-amber" id="btnPlaceholderStartMediaMtx">🚀 Launch MediaMTX Gateway</button>
               <button class="btn-cyber" onclick="document.getElementById('cameraConfigModal').classList.add('open')">Configure Stream URL</button>
-              <button class="btn-cyber btn-amber" id="btnOpenRtspGuideModal">RTSP Setup Guide (V380 Pro)</button>
+              <button class="btn-cyber" id="btnOpenRtspGuideModal">RTSP Setup Guide</button>
             </div>
           </div>
         </div>
@@ -137,17 +155,24 @@
       </div>
 
       <form id="cameraConfigForm">
+        <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; flex-wrap: wrap;">
+          <span style="font-size: 0.72rem; color: var(--text-dim); width: 100%;">QUICK PRESETS:</span>
+          <button type="button" class="btn-tile-quick" id="btnModalPresetWebRtc">🚀 MediaMTX WebRTC (:8889)</button>
+          <button type="button" class="btn-tile-quick" id="btnModalPresetHls">📺 MediaMTX HLS (:8888)</button>
+          <button type="button" class="btn-tile-quick" id="btnModalPresetEsp32">📷 ESP32-CAM MJPEG</button>
+        </div>
+
         <label style="font-size: 0.8rem; color: var(--text-muted);">
           Stream Endpoint URL (Browser-Compatible HTTP, MJPEG, or HLS)
         </label>
-        <input type="text" id="camStreamUrlInput" class="cyber-input" placeholder="e.g. http://192.168.1.100:8080/video or http://localhost:8889/cam/stream.mjpg">
+        <input type="text" id="camStreamUrlInput" class="cyber-input" placeholder="e.g. http://localhost:8889/trinetra_cam/ or http://192.168.1.151/mjpeg/1">
 
         <label style="font-size: 0.8rem; color: var(--text-muted);">Stream Protocol</label>
         <select id="camProtocolSelect" class="cyber-input">
-          <option value="mjpeg">MJPEG (Motion JPEG)</option>
-          <option value="http">Direct HTTP Video</option>
+          <option value="webrtc">WebRTC (MediaMTX Gateway - Sub-second latency)</option>
+          <option value="mjpeg">MJPEG (Motion JPEG / ESP32-CAM)</option>
           <option value="hls">HLS (HTTP Live Streaming)</option>
-          <option value="webrtc">WebRTC</option>
+          <option value="http">Direct HTTP Video</option>
         </select>
 
         <div style="font-size: 0.72rem; color: var(--text-dim); margin-bottom: 1rem;">
@@ -177,21 +202,21 @@
         </p>
 
         <p>
-          <strong style="color: var(--accent-cyan);">Recommended Solution: MediaMTX or go2rtc Gateway</strong>
+          <strong style="color: var(--accent-cyan);">Integrated Solution: MediaMTX Gateway (Included in <code>mediamtx/</code>)</strong>
         </p>
         <ol style="margin-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem;">
-          <li>Download the lightweight single-binary gateway <strong style="color: #fff;">MediaMTX</strong> (open source, zero install) or <strong style="color: #fff;">go2rtc</strong>.</li>
-          <li>In <code>mediamtx.yml</code>, add your camera path:
+          <li>Click <strong style="color: var(--accent-yellow);">"▶ Start Gateway"</strong> above (or run <code>mediamtx/start_mediamtx.bat</code>).</li>
+          <li>In <code>mediamtx/mediamtx.yml</code>, customize your camera's RTSP source URL:
             <pre style="background: rgba(5,8,17,0.9); padding: 8px; border-radius: 6px; font-family: monospace; color: var(--accent-yellow); margin-top: 4px;">
 paths:
   trinetra_cam:
     source: rtsp://admin:password@192.168.1.50:554/live/ch0
             </pre>
           </li>
-          <li>Run <code>mediamtx.exe</code>. It automatically exposes an instant browser-compatible stream at:<br>
-            <code style="color: var(--accent-cyan);">http://localhost:8889/trinetra_cam/</code> (WebRTC / HLS / MJPEG).
+          <li>MediaMTX automatically serves the stream to your browser at:<br>
+            <code style="color: var(--accent-cyan);">http://localhost:8889/trinetra_cam/</code> (WebRTC sub-second latency).
           </li>
-          <li>Paste that URL into the <strong>Configure Stream</strong> modal on this page!</li>
+          <li>Click the <strong style="color: var(--accent-cyan);">"🚀 WebRTC"</strong> button above to connect immediately!</li>
         </ol>
       </div>
 
@@ -201,8 +226,15 @@ paths:
     </div>
   </div>
 
-  <script src="/static/js/main.js"></script>
-  <script src="/static/js/camera.js"></script>
+  <script>
+    if (window.location.protocol === 'file:') {
+      document.write('<script src="js/main.js"><\/script>');
+      document.write('<script src="js/camera.js"><\/script>');
+    } else {
+      document.write('<script src="/static/js/main.js"><\/script>');
+      document.write('<script src="/static/js/camera.js"><\/script>');
+    }
+  </script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {

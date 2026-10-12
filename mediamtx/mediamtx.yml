@@ -1,4 +1,57 @@
+###############################################
+# TRINETRA Mission Control - MediaMTX Gateway Config
+# RTSP-to-WebRTC / HLS Bridge for Robot Camera
+###############################################
+
+# General & API settings
+logLevel: info
+logDestinations: [stdout]
+api: yes
+apiAddress: :9997
+
+# RTSP Server (Port 8554)
+rtsp: yes
+rtspAddress: :8554
+rtspTransports: [tcp, udp]
+
+# WebRTC Server (Port 8889 - Sub-second latency for Chrome/Edge/Firefox)
+webrtc: yes
+webrtcAddress: :8889
+webrtcAllowOrigins: ["*"]
+webrtcICEServers2:
+  - url: stun:stun.l.google.com:19302
+
+# HLS Server (Port 8888 - HTTP Live Streaming)
+hls: yes
+hlsAddress: :8888
+hlsAllowOrigins: ["*"]
+hlsAlwaysRemux: yes
+hlsVariant: lowLatency
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+
+# RTMP Server (Port 1935 - Optional)
+rtmp: no
+
+# Stream Routing & Source Paths
 paths:
+  # Primary Rover Camera Feed (V380 Pro / Tapo / ONVIF IP Camera)
+  # Replace credentials and IP with your camera's local LAN IP:
   trinetra_cam:
     source: rtsp://admin:password@192.168.1.50:554/live/ch0
-    
+    sourceOnDemand: yes
+    sourceOnDemandStartTimeout: 10s
+    sourceOnDemandCloseAfter: 10s
+
+  # ESP32-CAM Secondary Feed (Optional RTSP firmware)
+  esp32_cam:
+    source: rtsp://192.168.1.151:554/mjpeg/1
+    sourceOnDemand: yes
+
+  # Test Pattern / Loopback Feed (For bench testing without physical camera)
+  test_cam:
+    source: rtsp://127.0.0.1:8554/test_cam
+    sourceOnDemand: yes
+
+  # Catch-all: allows publishing any stream to rtsp://localhost:8554/<any_name>
+  all_others:

@@ -85,6 +85,17 @@ class CameraConfigUpdate(BaseModel):
     protocol: Optional[str] = Field("mjpeg", description="Stream protocol")
 
 
+class MediaMTXStatus(BaseModel):
+    running: bool = False
+    pid: Optional[int] = None
+    webrtc_url: str = "http://localhost:8889/trinetra_cam/"
+    hls_url: str = "http://localhost:8888/trinetra_cam/"
+    rtsp_url: str = "rtsp://localhost:8554/trinetra_cam"
+    api_url: str = "http://localhost:9997"
+    paths: list = []
+    message: Optional[str] = None
+
+
 class SystemStatus(BaseModel):
     backend_online: bool = True
     esp32_connected: bool = False

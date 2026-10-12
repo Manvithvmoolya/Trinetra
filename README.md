@@ -22,10 +22,13 @@ TRINETRA is a mission-critical robotics web application and FastAPI backend engi
    - Continuous 0-100% signal strength meter.
    - Audio/Visual alert banner for high-confidence mine anomalies.
    - Historical detection event table with GPS coordinates and depth estimation.
-5. **Optical Video Stream**:
-   - Stream connection states (Standby, Connecting, Active, Error).
-   - Sanitized credentials security (credentials never leaked in public API responses).
-   - RTSP-to-Web gateway setup guide for V380 Pro and IP cameras using MediaMTX.
+5. **Optical Video Stream & MediaMTX Gateway**:
+   - Integrated MediaMTX RTSP-to-WebRTC/HLS gateway binary (`mediamtx/mediamtx.exe`) with auto-start controls.
+   - Ultra-low latency WebRTC stream (`http://localhost:8889/trinetra_cam/`) and HLS stream (`http://localhost:8888/trinetra_cam/`).
+   - One-click gateway launcher via dashboard button, `start_mediamtx.bat`, or backend API (`/api/camera/mediamtx/start`).
+   - Stream connection states (Standby, Connecting, Active, Error) with live status pill.
+   - Sanitized credentials security (RTSP passwords stripped from public API responses).
+   - Multi-protocol support: WebRTC player frame, direct HTML5 video, and ESP32-CAM MJPEG image feed.
 6. **FastAPI Backend & ESP32 Hardware Integration**:
    - In-memory thread-safe state store with 10s hardware heartbeat monitoring.
    - High-frequency WebSocket telemetry broadcast (`/ws/telemetry`).
@@ -45,29 +48,34 @@ trinetra-backend/
 ├── HARDWARE_SETUP.md                # ESP32 wiring and LAN configuration guide
 ├── esp32/
 │   └── esp32_trinetra_firmware.ino  # Ready-to-flash Arduino C++ firmware
+├── mediamtx/
+│   ├── mediamtx.exe                 # Official Windows MediaMTX binary (v1.21.2)
+│   ├── mediamtx.yml                 # WebRTC, HLS, RTSP gateway routing configuration
+│   ├── start_mediamtx.bat           # 1-click Windows batch launcher
+│   └── start_mediamtx.ps1           # PowerShell runner with health log
 ├── app/
 │   ├── models.py                    # Pydantic validation schemas
 │   ├── services/
 │   │   ├── telemetry.py             # State store, heartbeat monitor, simulation, WebSockets
-│   │   └── camera.py                # Camera configuration & credential sanitization
+│   │   └── camera.py                # Camera configuration, MediaMTX process manager
 │   └── routers/
 │       ├── health.py                # GET /api/health
 │       ├── status.py                # GET /api/status, POST /api/simulation/toggle
 │       ├── location.py              # GET/POST /api/location, Map Pinning endpoints
 │       ├── sensors.py               # GET/POST /api/sensors, GET /api/detections
-│       ├── camera.py                # GET/POST /api/camera/config
+│       ├── camera.py                # GET/POST /api/camera/config, MediaMTX control endpoints
 │       └── telemetry.py             # GET /api/telemetry, WS /ws/telemetry
 ├── static/
 │   ├── index.html                   # Cockpit Mission Dashboard
 │   ├── robot.html                   # 3D Robot Explorer & Exploded View
-│   ├── camera.html                  # Optical Stream Viewer
+│   ├── camera.html                  # Optical Stream Viewer (WebRTC, HLS, MJPEG)
 │   ├── gps.html                     # Tactical Map & Location Pinning
 │   ├── sensors.html                 # Induction Detector Console
 │   ├── system.html                  # Diagnostics & Hardware Link
 │   ├── css/styles.css               # Dark cyber-robotics styling system
 │   ├── js/                          # Modular JavaScript controllers
 │   └── images/trinetra-robot.png    # Official prototype reference image
-└── tests/                           # Pytest unit tests (14 passing tests)
+└── tests/                           # Pytest unit tests (15 passing tests)
 ```
 
 ---

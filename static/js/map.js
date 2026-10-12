@@ -108,10 +108,24 @@ class TrinetraMap {
     });
 
     // Invalidate map size multiple times to ensure proper rendering inside flex/grid containers
-    setTimeout(() => { if (this.map) this.map.invalidateSize(true); }, 150);
-    setTimeout(() => { if (this.map) this.map.invalidateSize(true); }, 500);
-    setTimeout(() => { if (this.map) this.map.invalidateSize(true); }, 1200);
-    window.addEventListener('resize', () => { if (this.map) this.map.invalidateSize(true); });
+    const triggerInvalidate = () => {
+      if (this.map) {
+        this.map.invalidateSize(true);
+      }
+    };
+    setTimeout(triggerInvalidate, 80);
+    setTimeout(triggerInvalidate, 250);
+    setTimeout(triggerInvalidate, 600);
+    setTimeout(triggerInvalidate, 1200);
+    window.addEventListener('resize', triggerInvalidate);
+    window.addEventListener('load', triggerInvalidate);
+
+    if (window.ResizeObserver && this.container) {
+      try {
+        const ro = new ResizeObserver(() => triggerInvalidate());
+        ro.observe(this.container);
+      } catch (e) {}
+    }
   }
 
   initControls() {
@@ -180,7 +194,7 @@ class TrinetraMap {
       });
     }
 
-    // Direct Quick Switcher Buttons (OSM, Dark, Satellite)
+    // Direct Quick Switcher Buttons (OSM, Dark, Satellite, Offline Grid)
     const btnQuickOsm = document.getElementById('btnQuickTileOsm');
     if (btnQuickOsm) {
       btnQuickOsm.addEventListener('click', () => this.applyTileLayer('osm_standard'));
@@ -192,6 +206,10 @@ class TrinetraMap {
     const btnQuickSat = document.getElementById('btnQuickTileSat');
     if (btnQuickSat) {
       btnQuickSat.addEventListener('click', () => this.applyTileLayer('google_hybrid'));
+    }
+    const btnQuickGrid = document.getElementById('btnQuickTileGrid');
+    if (btnQuickGrid) {
+      btnQuickGrid.addEventListener('click', () => this.applyTileLayer('tactical_grid'));
     }
   }
 
@@ -266,6 +284,10 @@ class TrinetraMap {
         options = { maxZoom: 20, crossOrigin: true };
         break;
 
+      case 'tactical_grid':
+        provider = 'tactical_grid';
+        break;
+
       case 'osm_standard':
       default:
         provider = 'osm_standard';
@@ -275,26 +297,40 @@ class TrinetraMap {
         break;
     }
 
-    options.attribution = attribution;
-    
-    try {
-      this.currentTileLayer = L.tileLayer(tileUrl, options).addTo(this.map);
-
-      // Auto-fallback listener if tiles fail on current provider
-      let failCount = 0;
-      this.currentTileLayer.on('tileerror', () => {
-        failCount++;
-        if (failCount === 4) {
-          console.warn(`[TRINETRA MAP] Layer [${provider}] tile loading error. Auto-falling back to OpenStreetMap / Google.`);
-          if (provider !== 'osm_standard') {
-            this.applyTileLayer('osm_standard', '');
-          } else {
-            this.applyTileLayer('google_hybrid', '');
-          }
+    if (provider === 'tactical_grid') {
+      try {
+        this.currentTileLayer = this.createTacticalGridLayer();
+        if (this.currentTileLayer) {
+          this.currentTileLayer.addTo(this.map);
         }
-      });
-    } catch (layerErr) {
-      console.error("[TRINETRA MAP] Error adding tile layer:", layerErr);
+      } catch (gridErr) {
+        console.error("[TRINETRA MAP] Error creating tactical grid layer:", gridErr);
+      }
+    } else {
+      options.attribution = attribution;
+      try {
+        this.currentTileLayer = L.tileLayer(tileUrl, options).addTo(this.map);
+
+        // Auto-fallback listener if tiles fail on current provider
+        let failCount = 0;
+        this.currentTileLayer.on('tileerror', () => {
+          failCount++;
+          if (failCount === 4) {
+            console.warn(`[TRINETRA MAP] Layer [${provider}] tile loading error. Auto-falling back.`);
+            if (provider === 'carto_dark') {
+              this.applyTileLayer('osm_standard', '');
+            } else if (provider === 'osm_standard') {
+              this.applyTileLayer('google_hybrid', '');
+            } else {
+              this.applyTileLayer('tactical_grid', '');
+            }
+          }
+        });
+      } catch (layerErr) {
+        console.error("[TRINETRA MAP] Error adding tile layer, using tactical grid:", layerErr);
+        this.applyTileLayer('tactical_grid', '');
+        return;
+      }
     }
 
     this.currentProvider = provider;
@@ -316,6 +352,60 @@ class TrinetraMap {
     // Force map recalculation
     setTimeout(() => { if (this.map) this.map.invalidateSize(true); }, 80);
     setTimeout(() => { if (this.map) this.map.invalidateSize(true); }, 400);
+  }
+
+  createTacticalGridLayer() {
+    if (typeof L === 'undefined' || !L.GridLayer) return null;
+    
+    const TacticalGridLayer = L.GridLayer.extend({
+      createTile: function(coords) {
+        const tile = document.createElement('canvas');
+        tile.width = 256;
+        tile.height = 256;
+        const ctx = tile.getContext('2d');
+        if (!ctx) return tile;
+
+        // Dark tactical background
+        ctx.fillStyle = '#0a0f1d';
+        ctx.fillRect(0, 0, 256, 256);
+
+        // Sub-grid lines (32x32 px)
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.07)';
+        ctx.lineWidth = 1;
+        for (let i = 32; i < 256; i += 32) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0); ctx.lineTo(i, 256);
+          ctx.moveTo(0, i); ctx.lineTo(256, i);
+          ctx.stroke();
+        }
+
+        // Tile border
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.22)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, 0, 256, 256);
+
+        // Center crosshair
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.45)';
+        ctx.beginPath();
+        ctx.moveTo(128, 118); ctx.lineTo(128, 138);
+        ctx.moveTo(118, 128); ctx.lineTo(138, 128);
+        ctx.stroke();
+
+        // Coordinate text
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.55)';
+        ctx.font = '10px monospace';
+        ctx.fillText(`TAC-GRID Z${coords.z} [${coords.x},${coords.y}]`, 8, 18);
+
+        return tile;
+      }
+    });
+
+    return new TacticalGridLayer({
+      tileSize: 256,
+      maxZoom: 22,
+      minZoom: 1,
+      attribution: 'TRINETRA Tactical Radar Grid (Offline)'
+    });
   }
 
   initApiKeyModal() {

@@ -27,6 +27,7 @@ htmlcov/
 # OS Artifacts
 Thumbs.db
 ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-.DS_Store
+# Archives
+*.zip
+*.tar.gz
+

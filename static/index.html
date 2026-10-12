@@ -5,13 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TRINETRA — Indigenous Landmine Detection System</title>
   <meta name="description" content="Mission control dashboard and interactive 3D telemetry monitoring for the Trinetra Indigenous Landmine Detection Robot rover.">
-  <link rel="stylesheet" href="/static/css/leaflet.css">
-  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="stylesheet" href="/static/css/leaflet.css" id="leafletCss">
+  <link rel="stylesheet" href="/static/css/styles.css" id="stylesCss">
+  <script>
+    if (window.location.protocol === 'file:') {
+      const lCss = document.getElementById('leafletCss');
+      const sCss = document.getElementById('stylesCss');
+      if (lCss) lCss.href = 'css/leaflet.css';
+      if (sCss) sCss.href = 'css/styles.css';
+    }
+  </script>
   <script src="/static/js/leaflet.js"></script>
   <script>
     if (typeof L === 'undefined') {
-      document.write('<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">');
-      document.write('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\\/script>');
+      const src = (window.location.protocol === 'file:') ? 'js/leaflet.js' : 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      document.write('<script src="' + src + '"><\/script>');
     }
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -171,6 +179,7 @@
             <button class="btn-tile-quick" id="btnQuickTileOsm" data-provider="osm_standard" title="OpenStreetMap Standard">🗺 OSM</button>
             <button class="btn-tile-quick" id="btnQuickTileDark" data-provider="carto_dark" title="Carto Dark Tactical">🌑 Dark</button>
             <button class="btn-tile-quick" id="btnQuickTileSat" data-provider="google_hybrid" title="Satellite Hybrid">🛰 Sat</button>
+            <button class="btn-tile-quick" id="btnQuickTileGrid" data-provider="tactical_grid" title="Offline Tactical Coordinate Grid">🎯 Grid</button>
             <button class="btn-cyber" id="btnPinCurrentLocation" title="Pin current robot coordinates">📌 Pin</button>
             <button class="btn-cyber btn-amber" id="btnToggleDropPinMode" title="Click anywhere on map to drop pin">📍 Drop</button>
             <button class="btn-icon" id="btnTogglePinnedList" title="View Pinned Locations">📑</button>
@@ -321,12 +330,13 @@
         <select id="selectMapProvider" class="cyber-input">
           <option value="carto_dark">Carto Dark Tactical (Default, Free - No Key)</option>
           <option value="osm_standard">OpenStreetMap Standard (Free - No Key)</option>
+          <option value="tactical_grid">Offline Tactical Radar Grid (100% Offline - No Internet)</option>
+          <option value="google_hybrid">Google Satellite Hybrid (Direct Tiles)</option>
           <option value="mapbox_dark">Mapbox Dark v11 (Requires Mapbox Token)</option>
           <option value="mapbox_satellite">Mapbox Satellite & Streets (Requires Mapbox Token)</option>
           <option value="maptiler_dark">MapTiler Dark (Requires MapTiler Key)</option>
           <option value="maptiler_satellite">MapTiler Satellite (Requires MapTiler Key)</option>
           <option value="stadia_dark">Stadia Alidade Smooth Dark (Requires Stadia Key)</option>
-          <option value="google_hybrid">Google Satellite Hybrid (Direct Tiles)</option>
         </select>
 
         <label style="font-size: 0.8rem; color: var(--text-muted);">
@@ -347,11 +357,21 @@
   </div>
 
   <!-- Application Scripts -->
-  <script src="/static/js/main.js"></script>
-  <script src="/static/js/robot3d.js"></script>
-  <script src="/static/js/explodedView.js"></script>
-  <script src="/static/js/map.js"></script>
-  <script src="/static/js/telemetry.js"></script>
+  <script>
+    if (window.location.protocol === 'file:') {
+      document.write('<script src="js/main.js"><\/script>');
+      document.write('<script src="js/robot3d.js"><\/script>');
+      document.write('<script src="js/explodedView.js"><\/script>');
+      document.write('<script src="js/map.js"><\/script>');
+      document.write('<script src="js/telemetry.js"><\/script>');
+    } else {
+      document.write('<script src="/static/js/main.js"><\/script>');
+      document.write('<script src="/static/js/robot3d.js"><\/script>');
+      document.write('<script src="/static/js/explodedView.js"><\/script>');
+      document.write('<script src="/static/js/map.js"><\/script>');
+      document.write('<script src="/static/js/telemetry.js"><\/script>');
+    }
+  </script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {

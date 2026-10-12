@@ -6,14 +6,32 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
-  /* Color Palette */
-  --bg-darkest: #050811;
-  --bg-darker: #0a0f1d;
-  --bg-card: rgba(13, 20, 36, 0.78);
-  --bg-card-hover: rgba(19, 29, 52, 0.88);
-  --bg-glass: rgba(15, 23, 42, 0.65);
+  /* Color Palette — Deep Ashoka Navy Tactical Base */
+  --bg-darkest: #060b18;
+  --bg-darker: #0a1124;
+  --bg-card: rgba(10, 17, 36, 0.78);
+  --bg-card-hover: rgba(16, 27, 54, 0.88);
+  --bg-glass: rgba(12, 20, 42, 0.65);
   
-  /* Cyber Accents */
+  /* Indian Flag (Tiranga) Defense Theme Tokens */
+  --accent-saffron: #ff671f;
+  --accent-saffron-light: #ff9933;
+  --accent-saffron-glow: rgba(255, 103, 31, 0.38);
+  --accent-saffron-subtle: rgba(255, 103, 31, 0.12);
+
+  --accent-white: #ffffff;
+  --accent-white-glow: rgba(255, 255, 255, 0.28);
+  --accent-white-subtle: rgba(255, 255, 255, 0.08);
+
+  --accent-india-green: #138808;
+  --accent-india-green-light: #16a34a;
+  --accent-india-green-glow: rgba(19, 136, 8, 0.38);
+  --accent-india-green-subtle: rgba(19, 136, 8, 0.12);
+
+  --accent-chakra-navy: #060b18;
+  --accent-chakra-blue: #0284c7;
+
+  /* Cyber & Sensor Accents */
   --accent-cyan: #00f0ff;
   --accent-cyan-glow: rgba(0, 240, 255, 0.35);
   --accent-cyan-subtle: rgba(0, 240, 255, 0.12);
@@ -29,7 +47,7 @@
   --text-main: #f1f5f9;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
-  --border-glass: rgba(0, 240, 255, 0.18);
+  --border-glass: rgba(0, 240, 255, 0.16);
   --border-subtle: rgba(255, 255, 255, 0.08);
 
   /* Fonts */
@@ -54,10 +72,20 @@ body {
   line-height: 1.5;
   overflow-x: hidden;
   min-height: 100vh;
+  /* Multi-layered atmospheric lighting inspired by the Indian National Flag (Tiranga) */
   background-image: 
-    radial-gradient(circle at 15% 15%, rgba(0, 240, 255, 0.04) 0%, transparent 45%),
-    radial-gradient(circle at 85% 85%, rgba(250, 204, 21, 0.03) 0%, transparent 45%),
-    linear-gradient(rgba(5, 8, 17, 0.96), rgba(5, 8, 17, 0.98));
+    /* Saffron (Kesari) top atmospheric aura */
+    radial-gradient(ellipse 80% 40% at 50% -8%, rgba(255, 103, 31, 0.18) 0%, rgba(255, 153, 51, 0.06) 45%, transparent 70%),
+    /* Luminous White center tactical highlight */
+    radial-gradient(ellipse 65% 30% at 50% 48%, rgba(255, 255, 255, 0.045) 0%, rgba(248, 250, 252, 0.015) 50%, transparent 75%),
+    /* India Green bottom terrestrial radar field aura */
+    radial-gradient(ellipse 80% 40% at 50% 108%, rgba(19, 136, 8, 0.18) 0%, rgba(4, 106, 56, 0.06) 45%, transparent 70%),
+    /* Diagonal ambient corner flares */
+    radial-gradient(circle at 8% 18%, rgba(255, 103, 31, 0.09) 0%, transparent 35%),
+    radial-gradient(circle at 92% 82%, rgba(19, 136, 8, 0.09) 0%, transparent 35%),
+    /* Base Ashoka Chakra Deep Midnight Navy gradient */
+    linear-gradient(180deg, #070c1b 0%, #060a16 50%, #050914 100%);
+  background-attachment: fixed;
 }
 
 /* ==========================================================================
@@ -67,14 +95,36 @@ body {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: rgba(10, 15, 29, 0.85);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border-glass);
+  background: rgba(8, 14, 28, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0.75rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Subtle, high-tech Tiranga luminous micro-accent line under header */
+.tactical-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    #ff671f 0%, 
+    #ff9933 28%, 
+    #ffffff 46%, 
+    #00f0ff 50%, 
+    #ffffff 54%, 
+    #138808 72%, 
+    #046a38 100%
+  );
+  box-shadow: 0 0 10px rgba(255, 103, 31, 0.4), 0 0 10px rgba(19, 136, 8, 0.4);
+  opacity: 0.9;
 }
 
 .brand-section {
@@ -88,12 +138,12 @@ body {
 .brand-logo-icon {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #0284c7, #00f0ff);
+  background: linear-gradient(135deg, #ff671f 0%, #ffffff 46%, #00f0ff 54%, #138808 100%);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 15px var(--accent-cyan-glow);
+  box-shadow: 0 0 16px rgba(255, 103, 31, 0.35);
 }
 
 .brand-logo-icon svg {
@@ -116,9 +166,9 @@ body {
   font-size: 0.65rem;
   font-weight: 600;
   padding: 0.15rem 0.45rem;
-  background: var(--accent-cyan-subtle);
-  border: 1px solid var(--accent-cyan);
-  color: var(--accent-cyan);
+  background: rgba(255, 103, 31, 0.14);
+  border: 1px solid rgba(255, 103, 31, 0.5);
+  color: #ff9933;
   border-radius: 4px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -615,18 +665,60 @@ body {
   width: 4px;
   height: 100%;
   background: var(--accent-cyan);
+  transition: width 0.25s ease;
+}
+
+.stat-card:hover::after {
+  width: 6px;
+}
+
+/* Tiranga sequence for telemetry summary row */
+.telemetry-summary-row .stat-card:nth-child(1)::after {
+  background: linear-gradient(180deg, #ff671f, #ff9933);
+}
+
+.telemetry-summary-row .stat-card:nth-child(2)::after {
+  background: linear-gradient(180deg, #ffffff, #94a3b8);
+}
+
+.telemetry-summary-row .stat-card:nth-child(3)::after {
+  background: linear-gradient(180deg, #138808, #10b981);
+}
+
+.telemetry-summary-row .stat-card:nth-child(4)::after {
+  background: linear-gradient(180deg, #00f0ff, #0284c7);
+}
+
+.telemetry-summary-row .stat-card:nth-child(1):hover {
+  border-color: rgba(255, 103, 31, 0.45);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.65), 0 0 20px rgba(255, 103, 31, 0.15);
+}
+
+.telemetry-summary-row .stat-card:nth-child(2):hover {
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.65), 0 0 20px rgba(255, 255, 255, 0.12);
+}
+
+.telemetry-summary-row .stat-card:nth-child(3):hover {
+  border-color: rgba(19, 136, 8, 0.45);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.65), 0 0 20px rgba(19, 136, 8, 0.15);
+}
+
+.telemetry-summary-row .stat-card:nth-child(4):hover {
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.65), 0 0 20px rgba(0, 240, 255, 0.15);
 }
 
 .stat-card.alert-card::after {
-  background: var(--accent-red);
+  background: var(--accent-red) !important;
 }
 
 .stat-card.warning-card::after {
-  background: var(--accent-yellow);
+  background: var(--accent-yellow) !important;
 }
 
 .stat-card.success-card::after {
-  background: var(--accent-green);
+  background: var(--accent-green) !important;
 }
 
 .stat-label {

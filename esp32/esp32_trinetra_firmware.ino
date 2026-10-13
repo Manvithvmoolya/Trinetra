@@ -17,11 +17,11 @@
 // =========================================================================
 // 1. Wi-Fi & Laptop Settings
 // =========================================================================
-const char* WIFI_SSID     = "Your_WiFi_Name";        // <-- Put your Wi-Fi name
-const char* WIFI_PASSWORD = "Your_WiFi_Password";    // <-- Put your Wi-Fi password
+const char* WIFI_SSID     = "Galaxy S23";        // <-- Put your Wi-Fi name
+const char* WIFI_PASSWORD = "Galaxy s23";    // <-- Put your Wi-Fi password
 
 // Your laptop's exact IPv4 address from 'ipconfig':
-const char* SERVER_BASE_URL = "http://192.168.0.189:8000";
+const char* SERVER_BASE_URL = "http://10.134.156.69:8000";
 
 String locationEndpoint = String(SERVER_BASE_URL) + "/api/location";
 String sensorsEndpoint  = String(SERVER_BASE_URL) + "/api/sensors";
@@ -177,7 +177,7 @@ void processAndSendSensors() {
   if (WiFi.status() != WL_CONNECTED) return;
 
   // Read analog metal detector coil
-  int rawAdc = analogRead(PIN_METAL_DETECTOR);
+  int rawAdc = 0;
   float signalStrength = (rawAdc / 4095.0) * 100.0;
   bool anomalyDetected = (signalStrength > 65.0); // Anomaly threshold
 

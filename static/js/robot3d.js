@@ -1,13 +1,15 @@
 /**
  * TRINETRA 3D Interactive Procedural Robot Viewer
  * Powered by Three.js & OrbitControls
- * Reconstructs the Trinetra landmine detection robot faithfully from the visual reference image:
- * - 4 large off-road knobby wheels with distinct 5-spoke yellow rims
- * - Front metal detector boom arm with silver oscillator cylinder and circular spoked search coil
- * - Front camera assembly with central lens, 8-LED ring illuminator, and auxiliary LCD display
- * - Raised GPS mast with white GNSS puck antenna
- * - Electronics section with ESP32 board, blue/green PCBs, wiring harnesses, and rear whip antenna
- * - Chassis frame, battery pack, and drive motors
+ * Reconstructs the Trinetra landmine detection robot faithfully from the official hardware architecture:
+ * 01: Camera Module (V3 80 Pro) — 1080P HD lens, 8-LED ring lighting, auxiliary LCD telemetry
+ * 02: GPS Module (Neo-6M) — Elevated vertical mast, ceramic patch antenna puck dome, status LED
+ * 03: Metal Detector (Electromagnetic Induction) — Front boom arm, 8-spoke induction search loop, OLED screen
+ * 04: RC Bot Mobile Platform — 4x 12V 500 RPM DC motors, L298N driver, Arduino Uno, 4 yellow-rim wheels
+ * 05: NQR Structure (Non-Coherent Resonance) — Silencer cylinder, wire mesh sleeve, absorbent cotton core
+ * 06: Microphone (For Buzzer Audio) — Electret capsule acoustic sensor, twisted leads for audio uplink
+ * 07: ESP32 Microcontroller Unit — Dual-core processor, brass high-gain whip antenna, sensor breakout
+ * 08: Battery (12V LiPo Power Source) — High-discharge 3S battery pack with safety straps
  */
 
 class TrinetraRobot3D {
@@ -26,15 +28,35 @@ class TrinetraRobot3D {
     this.renderer = null;
     this.controls = null;
     this.robotRoot = null;
+    this.onPostRender = null;
     
-    // Group references for the 5 interactive modules + sub-assemblies
+    // Group references for all 8 official components + chassis
     this.modules = {
       camera: null,
       gps: null,
       metaldetector: null,
-      controller: null,
-      battery_drive: null,
-      chassis: null
+      rcbot: null,
+      nqr: null,
+      microphone: null,
+      esp32: null,
+      battery: null,
+      chassis: null,
+      controller: null,     // Backward compatibility alias for esp32
+      battery_drive: null  // Backward compatibility alias for rcbot
+    };
+
+    // Component name mappings for HUD badges and inspector
+    this.componentNames = {
+      camera: "01 — Camera Module (V3 80 Pro)",
+      gps: "02 — GPS Module (Neo-6M)",
+      metaldetector: "03 — Metal Detector (Induction Coil + Display)",
+      rcbot: "04 — RC Bot Mobile Platform (4 Motors + L298N)",
+      nqr: "05 — NQR Structure (Silencer + Mesh + Cotton)",
+      microphone: "06 — Microphone (For Buzzer Audio)",
+      esp32: "07 — ESP32 Microcontroller Unit",
+      battery: "08 — Battery (12V LiPo Power Source)",
+      controller: "07 — ESP32 Microcontroller Unit",
+      battery_drive: "04 — RC Bot Mobile Platform (4 Motors + L298N)"
     };
 
     // Sub-components mapped to their parent module for raycasting
@@ -198,11 +220,31 @@ class TrinetraRobot3D {
       metalness: 0.2
     });
 
+    const pcbRedMat = new THREE.MeshStandardMaterial({
+      color: 0xb91c1c,
+      roughness: 0.35,
+      metalness: 0.2
+    });
+
     const wireRedMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.6 });
     const wireBlackMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.6 });
+    const wireYellowMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.6 });
+
+    const meshScreenMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.6,
+      metalness: 0.7,
+      wireframe: false
+    });
+
+    const cottonCoreMat = new THREE.MeshStandardMaterial({
+      color: 0xf1f5f9,
+      roughness: 0.95,
+      metalness: 0.05
+    });
 
     // =========================================================================
-    // 1. MODULE: CHASSIS (Structural Core)
+    // 0. STRUCTURAL CHASSIS (Metal Frame Backbone)
     // =========================================================================
     const chassisGroup = new THREE.Group();
     chassisGroup.name = "module_chassis";
@@ -226,7 +268,7 @@ class TrinetraRobot3D {
       }
     });
 
-    // Upper black equipment deck
+    // Upper equipment deck
     const deckGeo = new THREE.BoxGeometry(1.1, 0.08, 1.7);
     const deck = new THREE.Mesh(deckGeo, darkMetalMat);
     deck.position.set(0, 0.52, 0);
@@ -244,29 +286,12 @@ class TrinetraRobot3D {
     this.robotRoot.add(chassisGroup);
 
     // =========================================================================
-    // 2. MODULE: BATTERY & 4WD DRIVE SYSTEM (Wheels, Motors, Power Pack)
+    // 04: RC BOT MOBILE PLATFORM (4 Motors + L298N Driver + Arduino Uno + Wheels)
     // =========================================================================
-    const batteryDriveGroup = new THREE.Group();
-    batteryDriveGroup.name = "module_battery_drive";
+    const rcbotGroup = new THREE.Group();
+    rcbotGroup.name = "module_rcbot";
 
-    // Heavy LiPo Battery Pack inside chassis center
-    const battGeo = new THREE.BoxGeometry(0.85, 0.28, 0.95);
-    const battMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.6, metalness: 0.3 });
-    const batt = new THREE.Mesh(battGeo, battMat);
-    batt.position.set(0, 0.68, -0.05);
-    batt.castShadow = true;
-    batteryDriveGroup.add(batt);
-
-    // Battery safety tie-down straps with purple accent ties
-    [-0.3, 0.2].forEach(zPos => {
-      const strapGeo = new THREE.BoxGeometry(0.87, 0.29, 0.06);
-      const strapMat = new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.5 });
-      const strap = new THREE.Mesh(strapGeo, strapMat);
-      strap.position.set(0, 0.68, zPos);
-      batteryDriveGroup.add(strap);
-    });
-
-    // 4 Heavy-duty Rugged Wheels with 5-Spoke Yellow Rims
+    // 4 Heavy-duty Rugged Wheels with signature Yellow 5-Spoke Rims
     const wheelPositions = [
       { x: -0.82, z: 0.65, isLeft: true },  // Front Left
       { x: 0.82, z: 0.65, isLeft: false },  // Front Right
@@ -274,7 +299,7 @@ class TrinetraRobot3D {
       { x: 0.82, z: -0.65, isLeft: false }  // Rear Right
     ];
 
-    wheelPositions.forEach((pos, idx) => {
+    wheelPositions.forEach((pos) => {
       const wheelGroup = new THREE.Group();
       wheelGroup.position.set(pos.x, 0.38, pos.z);
 
@@ -316,57 +341,134 @@ class TrinetraRobot3D {
       nut.rotation.z = Math.PI / 2;
       wheelGroup.add(nut);
 
-      // Drive axle motor canister connecting to chassis
+      // 12V 500 RPM DC Gearmotor canister
       const motorGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.22, 16);
       const motor = new THREE.Mesh(motorGeo, darkMetalMat);
       motor.rotation.z = Math.PI / 2;
       motor.position.set(pos.isLeft ? 0.16 : -0.16, 0, 0);
       wheelGroup.add(motor);
 
-      batteryDriveGroup.add(wheelGroup);
+      rcbotGroup.add(wheelGroup);
     });
 
-    this.registerMesh(batteryDriveGroup, 'battery_drive');
-    this.modules.battery_drive = batteryDriveGroup;
-    this.robotRoot.add(batteryDriveGroup);
+    // L298N Dual H-Bridge Motor Driver Board (Red PCB + Black Heatsink)
+    const l298nPcbGeo = new THREE.BoxGeometry(0.3, 0.03, 0.32);
+    const l298nPcb = new THREE.Mesh(l298nPcbGeo, pcbRedMat);
+    l298nPcb.position.set(-0.25, 0.65, -0.45);
+    rcbotGroup.add(l298nPcb);
+
+    // L298N Finned Aluminum Heatsink in Center
+    const heatsinkGeo = new THREE.BoxGeometry(0.14, 0.15, 0.1);
+    const heatsink = new THREE.Mesh(heatsinkGeo, darkMetalMat);
+    heatsink.position.set(-0.25, 0.74, -0.45);
+    rcbotGroup.add(heatsink);
+
+    // Screw terminal blocks (cyan/green blocks)
+    [-0.1, 0.1].forEach(xOff => {
+      const termGeo = new THREE.BoxGeometry(0.06, 0.05, 0.08);
+      const termMat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.5 });
+      const term = new THREE.Mesh(termGeo, termMat);
+      term.position.set(-0.25 + xOff, 0.68, -0.58);
+      rcbotGroup.add(term);
+    });
+
+    // Arduino Uno Microcontroller (Blue PCB)
+    const unoPcbGeo = new THREE.BoxGeometry(0.28, 0.03, 0.38);
+    const unoPcb = new THREE.Mesh(unoPcbGeo, pcbBlueMat);
+    unoPcb.position.set(-0.22, 0.65, 0.15);
+    rcbotGroup.add(unoPcb);
+
+    // ATmega IC Chip on Arduino
+    const icGeo = new THREE.BoxGeometry(0.06, 0.02, 0.18);
+    const ic = new THREE.Mesh(icGeo, darkMetalMat);
+    ic.position.set(-0.22, 0.67, 0.15);
+    rcbotGroup.add(ic);
+
+    // Silver USB-B connector port
+    const usbGeo = new THREE.BoxGeometry(0.08, 0.06, 0.07);
+    const usb = new THREE.Mesh(usbGeo, brushedSilverMat);
+    usb.position.set(-0.22, 0.68, 0.32);
+    rcbotGroup.add(usb);
+
+    // HC-05 Bluetooth Module (Small Blue Breakout)
+    const btGeo = new THREE.BoxGeometry(0.12, 0.02, 0.18);
+    const btMesh = new THREE.Mesh(btGeo, pcbBlueMat);
+    btMesh.position.set(-0.38, 0.65, 0.35);
+    rcbotGroup.add(btMesh);
+
+    this.registerMesh(rcbotGroup, 'rcbot');
+    this.modules.rcbot = rcbotGroup;
+    this.modules.battery_drive = rcbotGroup; // Alias
+    this.robotRoot.add(rcbotGroup);
 
     // =========================================================================
-    // 3. MODULE: FRONT METAL DETECTOR (Boom, Oscillator, Circular Spoked Loop)
+    // 08: BATTERY (12V LiPo Power Source)
+    // =========================================================================
+    const batteryGroup = new THREE.Group();
+    batteryGroup.name = "module_battery";
+
+    // 12V 3S LiPo Battery Enclosure Pack (Center-Mounted)
+    const battGeo = new THREE.BoxGeometry(0.65, 0.28, 0.85);
+    const battMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.5, metalness: 0.2 }); // Deep Blue casing
+    const batt = new THREE.Mesh(battGeo, battMat);
+    batt.position.set(0.12, 0.68, -0.05);
+    batt.castShadow = true;
+    batteryGroup.add(batt);
+
+    // Yellow Caution / 12V LiPo Spec Stripe across battery
+    const labelGeo = new THREE.BoxGeometry(0.66, 0.08, 0.5);
+    const labelMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.4 });
+    const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+    labelMesh.position.set(0.12, 0.78, -0.05);
+    batteryGroup.add(labelMesh);
+
+    // Battery safety tie-down straps with purple accent ties
+    [-0.28, 0.2].forEach(zPos => {
+      const strapGeo = new THREE.BoxGeometry(0.67, 0.29, 0.06);
+      const strapMat = new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.5 });
+      const strap = new THREE.Mesh(strapGeo, strapMat);
+      strap.position.set(0.12, 0.68, zPos);
+      batteryGroup.add(strap);
+    });
+
+    // Thick Red & Black Silicone Power Leads
+    const pLeadGeo1 = new THREE.CylinderGeometry(0.015, 0.015, 0.2, 8);
+    const pLead1 = new THREE.Mesh(pLeadGeo1, wireRedMat);
+    pLead1.rotation.x = Math.PI / 4;
+    pLead1.position.set(0.25, 0.82, -0.42);
+    batteryGroup.add(pLead1);
+
+    const pLeadGeo2 = new THREE.CylinderGeometry(0.015, 0.015, 0.2, 8);
+    const pLead2 = new THREE.Mesh(pLeadGeo2, wireBlackMat);
+    pLead2.rotation.x = Math.PI / 4;
+    pLead2.position.set(0.2, 0.82, -0.42);
+    batteryGroup.add(pLead2);
+
+    this.registerMesh(batteryGroup, 'battery');
+    this.modules.battery = batteryGroup;
+    this.robotRoot.add(batteryGroup);
+
+    // =========================================================================
+    // 03: METAL DETECTOR (Electromagnetic Induction Coil + Display)
     // =========================================================================
     const metalDetectorGroup = new THREE.Group();
     metalDetectorGroup.name = "module_metaldetector";
 
-    // Heavy-duty black angled boom arm
-    const boomGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.95, 16);
+    // Heavy-duty black angled boom arm extending forward
+    const boomGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.1, 16);
     const boom = new THREE.Mesh(boomGeo, darkMetalMat);
-    boom.rotation.x = Math.PI / 3.4;
-    boom.position.set(0, 0.44, 1.25);
+    boom.rotation.x = Math.PI / 3.2;
+    boom.position.set(0, 0.42, 1.35);
     boom.castShadow = true;
     metalDetectorGroup.add(boom);
 
-    // Stepped aluminum oscillator cylinder / coil driver body
-    const oscGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.42, 24);
-    const osc = new THREE.Mesh(oscGeo, brushedSilverMat);
-    osc.rotation.x = Math.PI / 2.8;
-    osc.position.set(0, 0.28, 1.48);
-    osc.castShadow = true;
-    metalDetectorGroup.add(osc);
-
-    // Oscillator ribs
-    for (let r = -0.15; r <= 0.15; r += 0.08) {
-      const ribGeo = new THREE.TorusGeometry(0.125, 0.012, 8, 24);
-      const rib = new THREE.Mesh(ribGeo, darkMetalMat);
-      rib.position.set(0, 0.28 + r * 0.5, 1.48 + r * 0.85);
-      metalDetectorGroup.add(rib);
-    }
-
-    // Articulated coil hinge knuckle
-    const knuckleGeo = new THREE.SphereGeometry(0.06, 16, 16);
+    // Articulated coil hinge knuckle joint
+    const knuckleGeo = new THREE.SphereGeometry(0.065, 16, 16);
     const knuckle = new THREE.Mesh(knuckleGeo, darkMetalMat);
-    knuckle.position.set(0, 0.14, 1.82);
+    knuckle.position.set(0, 0.12, 1.82);
     metalDetectorGroup.add(knuckle);
 
-    // Circular Spoked Search Loop (Torus + Hub + 8 Spokes) hovering above ground
+    // Circular Spoked Search Loop (Torus + Hub + 8 Radial Spokes) hovering over ground
     const coilGroup = new THREE.Group();
     coilGroup.position.set(0, 0.08, 1.95);
 
@@ -376,6 +478,13 @@ class TrinetraRobot3D {
     ring.rotation.x = Math.PI / 2;
     ring.castShadow = true;
     coilGroup.add(ring);
+
+    // Copper winding accent ring inside search coil
+    const copperRingGeo = new THREE.TorusGeometry(0.34, 0.012, 12, 32);
+    const copperMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.85 });
+    const copperRing = new THREE.Mesh(copperRingGeo, copperMat);
+    copperRing.rotation.x = Math.PI / 2;
+    coilGroup.add(copperRing);
 
     // Central hub
     const hubGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.05, 18);
@@ -394,17 +503,18 @@ class TrinetraRobot3D {
 
     metalDetectorGroup.add(coilGroup);
 
-    // Miniature detector OLED screen bracket on the boom
-    const oledBracketGeo = new THREE.BoxGeometry(0.18, 0.14, 0.06);
+    // Metal Detector OLED Display Bracket on Boom
+    const oledBracketGeo = new THREE.BoxGeometry(0.2, 0.15, 0.07);
     const oledBracket = new THREE.Mesh(oledBracketGeo, darkMetalMat);
-    oledBracket.position.set(0, 0.52, 1.15);
+    oledBracket.position.set(0, 0.55, 1.12);
     oledBracket.rotation.x = -Math.PI / 6;
     metalDetectorGroup.add(oledBracket);
 
-    const oledScreenGeo = new THREE.PlaneGeometry(0.14, 0.09);
-    const oledMat = new THREE.MeshBasicMaterial({ color: 0x84cc16 }); // Vibrant lime screen
+    // Vibrant Lime-Green OLED Signal / Metal ID Screen
+    const oledScreenGeo = new THREE.PlaneGeometry(0.16, 0.1);
+    const oledMat = new THREE.MeshBasicMaterial({ color: 0x84cc16 });
     const oledScreen = new THREE.Mesh(oledScreenGeo, oledMat);
-    oledScreen.position.set(0, 0.53, 1.18);
+    oledScreen.position.set(0, 0.56, 1.16);
     oledScreen.rotation.x = -Math.PI / 6;
     metalDetectorGroup.add(oledScreen);
 
@@ -413,7 +523,90 @@ class TrinetraRobot3D {
     this.robotRoot.add(metalDetectorGroup);
 
     // =========================================================================
-    // 4. MODULE: CAMERA & LED ILLUMINATION (Front Vision Unit)
+    // 05: NQR STRUCTURE (Silencer + Mesh + Cotton Core Explosive Detector)
+    // =========================================================================
+    const nqrGroup = new THREE.Group();
+    nqrGroup.name = "module_nqr";
+
+    // Main Cylindrical Silencer Body (Mounted forward above boom)
+    const silencerGeo = new THREE.CylinderGeometry(0.125, 0.125, 0.48, 24);
+    const silencer = new THREE.Mesh(silencerGeo, brushedSilverMat);
+    silencer.rotation.x = Math.PI / 2.7;
+    silencer.position.set(0, 0.32, 1.45);
+    silencer.castShadow = true;
+    nqrGroup.add(silencer);
+
+    // Perforated Outer Mesh Wire Sleeve / Grid Ribs
+    for (let r = -0.16; r <= 0.16; r += 0.06) {
+      const meshRibGeo = new THREE.TorusGeometry(0.132, 0.01, 8, 24);
+      const meshRib = new THREE.Mesh(meshRibGeo, meshScreenMat);
+      meshRib.position.set(0, 0.32 + r * 0.45, 1.45 + r * 0.88);
+      nqrGroup.add(meshRib);
+    }
+
+    // Inner Absorbent Cotton Chamber (Visible through end ports)
+    const cottonGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.44, 16);
+    const cottonCore = new THREE.Mesh(cottonGeo, cottonCoreMat);
+    cottonCore.rotation.x = Math.PI / 2.7;
+    cottonCore.position.set(0, 0.32, 1.45);
+    nqrGroup.add(cottonCore);
+
+    // Motorized sampling drive spindle / bracket
+    const nqrMotorGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.15, 16);
+    const nqrMotor = new THREE.Mesh(nqrMotorGeo, darkMetalMat);
+    nqrMotor.rotation.x = Math.PI / 2.7;
+    nqrMotor.position.set(0, 0.44, 1.25);
+    nqrGroup.add(nqrMotor);
+
+    this.registerMesh(nqrGroup, 'nqr');
+    this.modules.nqr = nqrGroup;
+    this.robotRoot.add(nqrGroup);
+
+    // =========================================================================
+    // 06: MICROPHONE (For Buzzer Audio Identification)
+    // =========================================================================
+    const micGroup = new THREE.Group();
+    micGroup.name = "module_microphone";
+
+    // Acoustic electret capsule cylinder (Silver can + black acoustic felt face)
+    const micCanGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.035, 16);
+    const micCan = new THREE.Mesh(micCanGeo, brushedSilverMat);
+    micCan.rotation.z = Math.PI / 2;
+    micCan.position.set(-0.35, 0.46, 0.72);
+    micGroup.add(micCan);
+
+    // Acoustic mesh face
+    const micFaceGeo = new THREE.CircleGeometry(0.042, 16);
+    const micFace = new THREE.Mesh(micFaceGeo, darkMetalMat);
+    micFace.rotation.y = -Math.PI / 2;
+    micFace.position.set(-0.37, 0.46, 0.72);
+    micGroup.add(micFace);
+
+    // Red and Black twisted audio wires routed to chassis
+    const micWireCurve1 = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-0.33, 0.46, 0.72),
+      new THREE.Vector3(-0.25, 0.5, 0.65),
+      new THREE.Vector3(-0.2, 0.54, 0.55)
+    ]);
+    const micWireGeo1 = new THREE.TubeGeometry(micWireCurve1, 10, 0.008, 6, false);
+    const micWire1 = new THREE.Mesh(micWireGeo1, wireRedMat);
+    micGroup.add(micWire1);
+
+    const micWireCurve2 = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-0.33, 0.45, 0.72),
+      new THREE.Vector3(-0.26, 0.49, 0.65),
+      new THREE.Vector3(-0.21, 0.53, 0.55)
+    ]);
+    const micWireGeo2 = new THREE.TubeGeometry(micWireCurve2, 10, 0.008, 6, false);
+    const micWire2 = new THREE.Mesh(micWireGeo2, wireBlackMat);
+    micGroup.add(micWire2);
+
+    this.registerMesh(micGroup, 'microphone');
+    this.modules.microphone = micGroup;
+    this.robotRoot.add(micGroup);
+
+    // =========================================================================
+    // 01: CAMERA MODULE (V3 80 Pro — Optical Reconnaissance & LED Ring)
     // =========================================================================
     const cameraGroup = new THREE.Group();
     cameraGroup.name = "module_camera";
@@ -425,7 +618,7 @@ class TrinetraRobot3D {
     camHousing.castShadow = true;
     cameraGroup.add(camHousing);
 
-    // Camera Bezel Ring & Optical Glass Lens
+    // Camera Bezel Ring & 1080P Optical Glass Lens
     const lensBezelGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.06, 24);
     const lensBezel = new THREE.Mesh(lensBezelGeo, darkMetalMat);
     lensBezel.rotation.x = Math.PI / 2;
@@ -453,7 +646,7 @@ class TrinetraRobot3D {
       cameraGroup.add(ledMesh);
     });
 
-    // Camera Point Light illuminating forward
+    // Camera Forward Spotlight Illuminator
     const camLight = new THREE.PointLight(0xffffff, 2.5, 8.0, 1.5);
     camLight.position.set(0, 1.28, 0.65);
     cameraGroup.add(camLight);
@@ -483,7 +676,7 @@ class TrinetraRobot3D {
     this.robotRoot.add(cameraGroup);
 
     // =========================================================================
-    // 5. MODULE: GPS RECEIVER & MAST (High-Precision GNSS Dome)
+    // 02: GPS MODULE (Neo-6M Real-Time Satellite Geolocation & Mast)
     // =========================================================================
     const gpsGroup = new THREE.Group();
     gpsGroup.name = "module_gps";
@@ -501,7 +694,7 @@ class TrinetraRobot3D {
     clamp.position.set(0.12, 1.05, -0.05);
     gpsGroup.add(clamp);
 
-    // White rounded squircle GNSS Antenna Puck Dome
+    // White rounded squircle Neo-6M Ceramic GNSS Antenna Puck Dome
     const puckBaseGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.06, 24);
     const puckMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2, metalness: 0.1 });
     const puckBase = new THREE.Mesh(puckBaseGeo, puckMat);
@@ -514,7 +707,7 @@ class TrinetraRobot3D {
     puckTop.position.set(0.12, 1.73, -0.05);
     gpsGroup.add(puckTop);
 
-    // GPS Status LED
+    // Neo-6M Lock Status Indicator LED
     const gpsLedGeo = new THREE.SphereGeometry(0.015, 8, 8);
     const gpsLedMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
     const gpsLed = new THREE.Mesh(gpsLedGeo, gpsLedMat);
@@ -526,36 +719,36 @@ class TrinetraRobot3D {
     this.robotRoot.add(gpsGroup);
 
     // =========================================================================
-    // 6. MODULE: CONTROLLER & ELECTRONICS (ESP32, PCBs, Wiring, Whip Antenna)
+    // 07: ESP32 MICROCONTROLLER UNIT (Dual-Core Processing & Wi-Fi Link)
     // =========================================================================
-    const controllerGroup = new THREE.Group();
-    controllerGroup.name = "module_controller";
+    const esp32Group = new THREE.Group();
+    esp32Group.name = "module_esp32";
 
     // Rear elevated electronics junction box
     const jBoxGeo = new THREE.BoxGeometry(0.65, 0.22, 0.55);
     const jBox = new THREE.Mesh(jBoxGeo, darkMetalMat);
     jBox.position.set(0.1, 0.95, -0.6);
     jBox.castShadow = true;
-    controllerGroup.add(jBox);
+    esp32Group.add(jBox);
 
-    // Stepped Microcontroller Board (ESP32 with silver RF shield)
+    // ESP32 Dual-Core Board (Green PCB with Silver RF Shield)
     const esp32PcbGeo = new THREE.BoxGeometry(0.32, 0.04, 0.42);
     const esp32Pcb = new THREE.Mesh(esp32PcbGeo, pcbGreenMat);
     esp32Pcb.position.set(0.26, 1.08, -0.18);
-    controllerGroup.add(esp32Pcb);
+    esp32Group.add(esp32Pcb);
 
     const esp32ShieldGeo = new THREE.BoxGeometry(0.2, 0.03, 0.24);
     const esp32Shield = new THREE.Mesh(esp32ShieldGeo, brushedSilverMat);
     esp32Shield.position.set(0.26, 1.11, -0.22);
-    controllerGroup.add(esp32Shield);
+    esp32Group.add(esp32Shield);
 
-    // Blue Sensor Breakout PCB
+    // Blue Sensor Breakout PCB (IMU / ADC)
     const sensorPcbGeo = new THREE.BoxGeometry(0.24, 0.04, 0.24);
     const sensorPcb = new THREE.Mesh(sensorPcbGeo, pcbBlueMat);
     sensorPcb.position.set(-0.25, 0.95, 0.02);
-    controllerGroup.add(sensorPcb);
+    esp32Group.add(sensorPcb);
 
-    // Bundled Power & Signal Wiring Harnesses (Red & Black)
+    // Multi-color Telemetry & Signal Jumper Wires
     const curvePoints1 = [
       new THREE.Vector3(-0.2, 0.94, 0.1),
       new THREE.Vector3(-0.35, 0.88, 0.3),
@@ -564,7 +757,7 @@ class TrinetraRobot3D {
     const wireCurve1 = new THREE.CatmullRomCurve3(curvePoints1);
     const wireGeo1 = new THREE.TubeGeometry(wireCurve1, 12, 0.014, 6, false);
     const wire1 = new THREE.Mesh(wireGeo1, wireRedMat);
-    controllerGroup.add(wire1);
+    esp32Group.add(wire1);
 
     const curvePoints2 = [
       new THREE.Vector3(-0.22, 0.93, 0.1),
@@ -574,24 +767,35 @@ class TrinetraRobot3D {
     const wireCurve2 = new THREE.CatmullRomCurve3(curvePoints2);
     const wireGeo2 = new THREE.TubeGeometry(wireCurve2, 12, 0.014, 6, false);
     const wire2 = new THREE.Mesh(wireGeo2, wireBlackMat);
-    controllerGroup.add(wire2);
+    esp32Group.add(wire2);
+
+    const curvePoints3 = [
+      new THREE.Vector3(0.18, 1.06, -0.25),
+      new THREE.Vector3(0.15, 1.15, -0.1),
+      new THREE.Vector3(0.12, 1.3, -0.05)
+    ];
+    const wireCurve3 = new THREE.CatmullRomCurve3(curvePoints3);
+    const wireGeo3 = new THREE.TubeGeometry(wireCurve3, 10, 0.01, 6, false);
+    const wire3 = new THREE.Mesh(wireGeo3, wireYellowMat);
+    esp32Group.add(wire3);
 
     // Tall Rear High-Gain Whip Antenna with knurled brass base
     const antBaseGeo = new THREE.CylinderGeometry(0.045, 0.05, 0.12, 16);
     const brassMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.85, roughness: 0.3 });
     const antBase = new THREE.Mesh(antBaseGeo, brassMat);
     antBase.position.set(0.38, 1.12, -0.72);
-    controllerGroup.add(antBase);
+    esp32Group.add(antBase);
 
     const whipGeo = new THREE.CylinderGeometry(0.015, 0.028, 0.85, 12);
     const whip = new THREE.Mesh(whipGeo, darkMetalMat);
     whip.position.set(0.38, 1.58, -0.72);
     whip.castShadow = true;
-    controllerGroup.add(whip);
+    esp32Group.add(whip);
 
-    this.registerMesh(controllerGroup, 'controller');
-    this.modules.controller = controllerGroup;
-    this.robotRoot.add(controllerGroup);
+    this.registerMesh(esp32Group, 'esp32');
+    this.modules.esp32 = esp32Group;
+    this.modules.controller = esp32Group; // Alias
+    this.robotRoot.add(esp32Group);
   }
 
   registerMesh(group, moduleKey) {
@@ -680,7 +884,10 @@ class TrinetraRobot3D {
 
     const badge = document.getElementById('hudHoveredPartName');
     if (badge) {
-      if (moduleKey) {
+      if (moduleKey && this.componentNames[moduleKey]) {
+        badge.textContent = `TARGET: ${this.componentNames[moduleKey]}`;
+        badge.style.borderColor = 'var(--accent-cyan)';
+      } else if (moduleKey) {
         badge.textContent = `TARGET: ${moduleKey.toUpperCase()}`;
         badge.style.borderColor = 'var(--accent-cyan)';
       } else {
@@ -688,6 +895,18 @@ class TrinetraRobot3D {
         badge.style.borderColor = 'var(--border-glass)';
       }
     }
+
+    // Bidirectional highlight with 3D floating labels
+    document.querySelectorAll('.component-3d-label').forEach(lbl => {
+      const matchKey = lbl.getAttribute('data-module');
+      if (matchKey === moduleKey || 
+         (matchKey === 'esp32' && moduleKey === 'controller') ||
+         (matchKey === 'rcbot' && moduleKey === 'battery_drive')) {
+        lbl.classList.add('highlighted');
+      } else {
+        lbl.classList.remove('highlighted');
+      }
+    });
   }
 
   selectModule(moduleKey) {
@@ -736,10 +955,13 @@ class TrinetraRobot3D {
 
   animate() {
     requestAnimationFrame(() => this.animate());
-    const delta = this.clock.getDelta();
 
     if (this.controls) {
       this.controls.update();
+    }
+
+    if (typeof this.onPostRender === 'function') {
+      this.onPostRender();
     }
 
     this.renderer.render(this.scene, this.camera);

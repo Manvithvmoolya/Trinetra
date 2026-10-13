@@ -44,23 +44,24 @@
 
   <main class="app-container" style="max-width: 1800px;">
 
-    <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr; margin-bottom: 1.5rem;">
+    <div class="dashboard-grid" style="grid-template-columns: 2fr 1.05fr; margin-bottom: 1.5rem;">
 
       <!-- Full-Feature 3D Viewport Panel -->
       <section class="glass-panel" style="padding: 1rem;">
         <div class="panel-header">
           <div class="panel-title">
             <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 14.93V17a1 1 0 11-2 0v-.07A7.003 7.003 0 015.07 11H5a1 1 0 110-2h.07A7.003 7.003 0 0111 2.07V2a1 1 0 112 0v.07A7.003 7.003 0 0118.93 9H19a1 1 0 110 2h-.07A7.003 7.003 0 0113 16.93z"/></svg>
-            High-Fidelity Procedural 3D Model
+            Interactive 3D Component Architecture Explorer
           </div>
           <div class="panel-actions">
-            <button class="btn-cyber btn-amber" id="btnExplodeComponents">
+            <button class="btn-cyber active" id="btnToggleLabels" title="Toggle 3D Floating Component Name Labels">🏷️ Labels: ON</button>
+            <button class="btn-cyber btn-amber" id="btnExplodeComponents" title="Disassemble all components in 3D">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
               Explore Components
             </button>
             <button class="btn-cyber" id="btnResetCamera">↺ Reset Angle</button>
             <button class="btn-icon active" id="btnToggleAutoRotate" title="Auto-Rotate">⟳</button>
-            <button class="btn-icon" id="btnToggleHeadlights" title="Toggle Floodlights">💡</button>
+            <button class="btn-icon" id="btnToggleHeadlights" title="Toggle Camera LEDs">💡</button>
           </div>
         </div>
 
@@ -68,17 +69,20 @@
           <!-- Top HUD Badges -->
           <div class="viewport-hud-top">
             <div class="hud-badge" id="hudHoveredPartName">TRINETRA MK-1 • READY</div>
-            <div class="hud-badge" style="color: var(--accent-cyan);">CLICK ANY MODULE TO ISOLATE</div>
+            <div class="hud-badge" style="color: var(--accent-cyan);">CLICK ANY COMPONENT OR LABEL TO INSPECT</div>
           </div>
 
-          <!-- Bottom Controls -->
-          <div class="viewport-controls-bottom">
-            <div class="hud-button-group">
-              <button class="btn-cyber" onclick="window.isolatePart('camera')">01: Camera</button>
-              <button class="btn-cyber" onclick="window.isolatePart('gps')">02: GPS</button>
-              <button class="btn-cyber" onclick="window.isolatePart('metaldetector')">03: Detector</button>
-              <button class="btn-cyber" onclick="window.isolatePart('controller')">04: ESP32</button>
-              <button class="btn-cyber" onclick="window.isolatePart('battery_drive')">05: 4WD</button>
+          <!-- Bottom Operational Controls -->
+          <div class="viewport-controls-bottom" style="flex-direction: column; align-items: stretch; gap: 0.5rem;">
+            <div class="hud-button-group" style="flex-wrap: wrap; justify-content: center; gap: 0.4rem;">
+              <button class="btn-cyber" onclick="window.isolatePart('camera')">01: Camera (V3 80 Pro)</button>
+              <button class="btn-cyber" onclick="window.isolatePart('gps')">02: GPS (Neo-6M)</button>
+              <button class="btn-cyber" onclick="window.isolatePart('metaldetector')">03: Metal Detector</button>
+              <button class="btn-cyber" onclick="window.isolatePart('rcbot')">04: RC Bot (4WD)</button>
+              <button class="btn-cyber" onclick="window.isolatePart('nqr')">05: NQR Structure</button>
+              <button class="btn-cyber" onclick="window.isolatePart('microphone')">06: Microphone</button>
+              <button class="btn-cyber" onclick="window.isolatePart('esp32')">07: ESP32 MCU</button>
+              <button class="btn-cyber" onclick="window.isolatePart('battery')">08: 12V LiPo</button>
               <button class="btn-cyber btn-amber" onclick="window.isolatePart('all')">Show All</button>
             </div>
           </div>
@@ -97,35 +101,125 @@
         </div>
       </section>
 
-      <!-- Side Panel: Visual Design Reference Comparison -->
-      <section class="glass-panel" style="display: flex; flex-direction: column; gap: 1rem;">
-        <div class="panel-header">
+      <!-- Side Panel: Hardware Architecture Specification & Component Directory -->
+      <section class="glass-panel" style="display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; max-height: 740px;">
+        <div class="panel-header" style="margin-bottom: 0.5rem;">
           <div class="panel-title">
             <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-            Original Hardware Reference
+            Hardware Architecture Reference
           </div>
-          <span class="status-pill" style="font-size: 11px; color: var(--accent-yellow);">PHYSICAL PROTOTYPE</span>
+          <div style="display: flex; gap: 0.35rem;">
+            <button class="btn-tile-quick active" id="btnTabPoster" onclick="window.switchRefTab('poster')">Poster Spec</button>
+            <button class="btn-tile-quick" id="btnTabProto" onclick="window.switchRefTab('proto')">Prototype</button>
+          </div>
         </div>
 
-        <div style="border-radius: 8px; overflow: hidden; border: 1px solid var(--border-glass); background: #04060b;">
-          <img src="/static/images/trinetra-robot.png" alt="Trinetra Landmine Detection Robot Prototype" style="width: 100%; height: auto; display: block; object-fit: cover;">
+        <!-- Reference Graphic Display -->
+        <div id="refGraphicContainer" style="border-radius: 8px; overflow: hidden; border: 1px solid var(--border-glass); background: #04060b; max-height: 240px; cursor: pointer;" title="Click to view high-resolution image" onclick="window.open(document.getElementById('refGraphicImg').src, '_blank')">
+          <img id="refGraphicImg" src="/static/images/trinetra-components-spec.jpg" alt="Trinetra Hardware Architecture Specification" style="width: 100%; height: auto; max-height: 240px; display: block; object-fit: contain;">
         </div>
 
-        <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
-          <strong style="color: #fff;">Hardware Construction Specifications:</strong>
-          <ul style="margin-left: 1.2rem; margin-top: 0.4rem; display: flex; flex-direction: column; gap: 0.3rem;">
-            <li><strong>Chassis:</strong> Anodized dual-deck aluminum frame with brushed steel side rails.</li>
-            <li><strong>Drive:</strong> 4 high-traction knobby rubber wheels with signature <strong>yellow 5-spoke rims</strong>.</li>
-            <li><strong>Vision:</strong> Front camera cube with 8-LED ring and auxiliary green 16x2 LCD status display.</li>
-            <li><strong>GNSS:</strong> Elevated vertical mast with white rounded puck GPS receiver.</li>
-            <li><strong>Detection:</strong> Front boom arm, stepped oscillator cylinder, and circular 8-spoke induction coil.</li>
-            <li><strong>Controller:</strong> Dual-core ESP32 MCU, blue IMU breakout, and brass-mounted whip antenna.</li>
-          </ul>
+        <!-- Interactive Component Directory List -->
+        <div>
+          <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; display: flex; justify-content: space-between;">
+            <span>Official Component Directory</span>
+            <span style="color: var(--text-dim); font-size: 0.7rem;">Click to Isolate & View</span>
+          </div>
+
+          <div class="component-directory-list">
+            <div class="component-directory-item" data-module="camera" onclick="window.isolatePart('camera')">
+              <div class="item-info">
+                <span class="item-badge">01</span>
+                <div>
+                  <div class="item-name">Camera Module (V3 80 Pro)</div>
+                  <div class="item-tag">1080P HD • 8-LED Ring • Sutrovich App</div>
+                </div>
+              </div>
+              <span class="btn-cyber" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">Inspect →</span>
+            </div>
+
+            <div class="component-directory-item" data-module="gps" onclick="window.isolatePart('gps')">
+              <div class="item-info">
+                <span class="item-badge" style="background: rgba(250,204,21,0.15); color: var(--accent-yellow);">02</span>
+                <div>
+                  <div class="item-name">GPS Module (Neo-6M)</div>
+                  <div class="item-tag">Real-Time GNSS • Ceramic Puck Mast</div>
+                </div>
+              </div>
+              <span class="btn-cyber" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">Inspect →</span>
+            </div>
+
+            <div class="component-directory-item" data-module="metaldetector" onclick="window.isolatePart('metaldetector')">
+              <div class="item-info">
+                <span class="item-badge" style="background: rgba(239,68,68,0.15); color: var(--accent-red);">03</span>
+                <div>
+                  <div class="item-name">Metal Detector (Induction Coil + Display)</div>
+                  <div class="item-tag">8-Spoke Search Loop • OLED ID Meter</div>
+                </div>
+              </div>
+              <span class="btn-cyber" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">Inspect →</span>
+            </div>
+
+            <div class="component-directory-item" data-module="rcbot" onclick="window.isolatePart('rcbot')">
+              <div class="item-info">
+                <span class="item-badge" style="background: rgba(250,204,21,0.15); color: var(--accent-yellow);">04</span>
+                <div>
+                  <div class="item-name">RC Bot Mobile Platform (4WD + L298N)</div>
+                  <div class="item-tag">4x 500 RPM Motors • Arduino Uno • HC-05</div>
+                </div>
+              </div>
+              <span class="btn-cyber" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">Inspect →</span>
+            </div>
+
+            <div class="component-directory-item" data-module="nqr" onclick="window.isolatePart('nqr')">
+              <div class="item-info">
+                <span class="item-badge">05</span>
+                <div>
+                  <div class="item-name">NQR Structure (Silencer + Mesh + Cotton)</div>
+                  <div class="item-tag">Explosive Vapor Sampling • Motorized Drive</div>
+                </div>
+              </div>
+              <span class="btn-cyber" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">Inspect →</span>
+            </div>
+
+            <div class="component-directory-item" data-module="microphone" onclick="window.isolatePart('microphone')">
+              <div class="item-info">
+                <span class="item-badge" style="background: rgba(16,185,129,0.15); color: var(--accent-green);">06</span>
+                <div>
+                  <div class="item-name">Microphone (For Buzzer Audio)</div>
+                  <div class="item-tag">Buzzer Tone Sensor • Audible Remote Uplink</div>
+                </div>
+              </div>
+              <span class="btn-cyber" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">Inspect →</span>
+            </div>
+
+            <div class="component-directory-item" data-module="esp32" onclick="window.isolatePart('esp32')">
+              <div class="item-info">
+                <span class="item-badge">07</span>
+                <div>
+                  <div class="item-name">ESP32 Microcontroller Unit</div>
+                  <div class="item-tag">Dual-Core Tensilica • Wi-Fi Uplink • Whip Antenna</div>
+                </div>
+              </div>
+              <span class="btn-cyber" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">Inspect →</span>
+            </div>
+
+            <div class="component-directory-item" data-module="battery" onclick="window.isolatePart('battery')">
+              <div class="item-info">
+                <span class="item-badge" style="background: rgba(250,204,21,0.15); color: var(--accent-yellow);">08</span>
+                <div>
+                  <div class="item-name">Battery (12V LiPo Power Source)</div>
+                  <div class="item-tag">3S High-Discharge Pack • Powers 4WD & Sensors</div>
+                </div>
+              </div>
+              <span class="btn-cyber" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">Inspect →</span>
+            </div>
+          </div>
         </div>
 
-        <div style="margin-top: auto; padding-top: 0.5rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between;">
-          <span style="font-size: 0.72rem; color: var(--text-dim);">FILE: static/images/trinetra-robot.png</span>
-          <span style="font-size: 0.72rem; color: var(--accent-green);">100% SPEC COMPLIANT</span>
+        <div style="margin-top: auto; padding-top: 0.5rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.72rem; color: var(--text-dim);">SYSTEM SPECIFICATION 100% ALIGNED</span>
+          <span style="font-size: 0.72rem; color: var(--accent-green);">● 8 MODULES MAPPED</span>
         </div>
       </section>
 
@@ -152,17 +246,38 @@
             if (group) group.visible = true;
           });
           viewer.resetCamera();
+          // Remove active states from directory list
+          document.querySelectorAll('.component-directory-item').forEach(el => el.classList.remove('active'));
           return;
         }
 
         Object.entries(m).forEach(([key, group]) => {
           if (group) {
-            group.visible = (key === partKey || key === 'chassis');
+            group.visible = (key === partKey || key === 'chassis' ||
+                             (key === 'esp32' && partKey === 'controller') ||
+                             (key === 'rcbot' && partKey === 'battery_drive'));
           }
         });
 
-        // Trigger detail card
+        // Trigger detail card & directory list highlight
         exploded.showModuleCard(partKey);
+      };
+
+      // Reference graphic tab switcher
+      window.switchRefTab = function(tab) {
+        const img = document.getElementById('refGraphicImg');
+        const btnPoster = document.getElementById('btnTabPoster');
+        const btnProto = document.getElementById('btnTabProto');
+
+        if (tab === 'poster') {
+          img.src = '/static/images/trinetra-components-spec.jpg';
+          btnPoster.classList.add('active');
+          btnProto.classList.remove('active');
+        } else {
+          img.src = '/static/images/trinetra-robot.png';
+          btnProto.classList.add('active');
+          btnPoster.classList.remove('active');
+        }
       };
     });
   </script>

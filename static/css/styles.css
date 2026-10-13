@@ -609,30 +609,162 @@ body {
   font-weight: 600;
 }
 
-/* 3D Bill-boarded Labels */
+/* 3D Bill-boarded Tactical Labels */
 .component-3d-label {
   position: absolute;
-  background: rgba(5, 8, 17, 0.88);
+  background: rgba(7, 12, 26, 0.94);
   border: 1px solid var(--accent-cyan);
   color: #fff;
-  padding: 0.25rem 0.65rem;
-  border-radius: 4px;
+  padding: 0.32rem 0.65rem;
+  border-radius: 6px;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
   pointer-events: auto;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 0 12px var(--accent-cyan-glow);
-  transform: translate(-50%, -50%);
-  transition: all 0.2s ease;
-  z-index: 15;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 14px var(--accent-cyan-glow);
+  transform: translate(-50%, -100%) translateY(-10px);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  user-select: none;
+  backdrop-filter: blur(10px);
 }
 
-.component-3d-label:hover {
+.component-3d-label::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: rgba(7, 12, 26, 0.95);
+  border-right: 1px solid var(--accent-cyan);
+  border-bottom: 1px solid var(--accent-cyan);
+  transition: border-color 0.2s ease;
+}
+
+.component-3d-label .label-idx {
   background: var(--accent-cyan);
+  color: #060b18;
+  font-weight: 800;
+  font-size: 0.65rem;
+  padding: 0.12rem 0.38rem;
+  border-radius: 3px;
+  line-height: 1;
+  letter-spacing: 0.05em;
+}
+
+.component-3d-label .label-text {
+  letter-spacing: 0.02em;
+}
+
+.component-3d-label:hover,
+.component-3d-label.highlighted {
+  background: rgba(0, 240, 255, 0.25);
+  border-color: #fff;
+  box-shadow: 0 0 22px var(--accent-cyan-glow), 0 6px 24px rgba(0, 0, 0, 0.85);
+  transform: translate(-50%, -100%) translateY(-14px) scale(1.08);
+  z-index: 30;
+}
+
+.component-3d-label.label-yellow {
+  border-color: var(--accent-yellow);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 14px var(--accent-yellow-glow);
+}
+.component-3d-label.label-yellow::after {
+  border-right-color: var(--accent-yellow);
+  border-bottom-color: var(--accent-yellow);
+}
+.component-3d-label.label-yellow .label-idx {
+  background: var(--accent-yellow);
   color: #050811;
-  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.component-3d-label.label-red {
+  border-color: var(--accent-red);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 14px var(--accent-red-glow);
+}
+.component-3d-label.label-red::after {
+  border-right-color: var(--accent-red);
+  border-bottom-color: var(--accent-red);
+}
+.component-3d-label.label-red .label-idx {
+  background: var(--accent-red);
+  color: #fff;
+}
+
+.component-3d-label.label-green {
+  border-color: var(--accent-green);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 14px var(--accent-green-glow);
+}
+.component-3d-label.label-green::after {
+  border-right-color: var(--accent-green);
+  border-bottom-color: var(--accent-green);
+}
+.component-3d-label.label-green .label-idx {
+  background: var(--accent-green);
+  color: #050811;
+}
+
+/* Component Directory List (Side Panel) */
+.component-directory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.component-directory-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.component-directory-item:hover,
+.component-directory-item.active {
+  background: rgba(0, 240, 255, 0.09);
+  border-color: var(--accent-cyan);
+  transform: translateX(3px);
+}
+
+.component-directory-item .item-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.component-directory-item .item-badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(0, 240, 255, 0.15);
+  color: var(--accent-cyan);
+}
+
+.component-directory-item .item-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.component-directory-item .item-tag {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 /* ==========================================================================

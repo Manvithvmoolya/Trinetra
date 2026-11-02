@@ -32,7 +32,7 @@ srt: no
 
 paths:
   trinetra_cam:
-    source: rtsp://172.24.54.227:554/live/ch00_1
+    source: rtsp://172.24.54.195/live/ch00_1
     rtspTransport: tcp
     sourceOnDemand: yes
     sourceOnDemandStartTimeout: 15s
